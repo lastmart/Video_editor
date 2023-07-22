@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "video-editor"
+version = "0.1.0"
+description = "Best editor ever ;-)"
+authors = ["dimastarsis <kurilin.dmitriy@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+moviepy = "^1.0.3"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

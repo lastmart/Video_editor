@@ -1,6 +1,6 @@
 from moviepy.editor import VideoFileClip, concatenate_videoclips
 from video_editor import *
-from PyQt5.QtWidgets import QApplication, QWidget
+from PyQt6.QtWidgets import QApplication, QWidget
 import sys
 
 video_paths = [
@@ -12,8 +12,9 @@ window = QWidget()
 window.show()
 app.exec()
 print(123)
-#merged = merge_clips(clips)
-#save_clip(merged, "1.mp4")
+clips = open_clips(video_paths)
+merged = merge_clips(clips)
+save_clip(merged, "1.mp4")
 
-#speeded = set_clip_speed(clips[0], 0.5)
-#save_clip(speeded, "3.mp4")
+speeded = set_clip_speed(clips[0], 0.5)
+save_clip(speeded, "3.mp4")

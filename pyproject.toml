@@ -8,6 +8,7 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = "^3.11"
 moviepy = "^1.0.3"
+pyqt5 = "^5.15.9"
 
 
 [build-system]

@@ -19,14 +19,12 @@ def set_clip_speed(clip: VideoFileClip, speed: int) -> VideoFileClip:
 
 
 def save_clip(clip: VideoFileClip, output_path: str) -> None:
-    clip.write_videofile(output_path)
+    clip.write_videofile(output_path, codec="libx264")
 
 
-def open_clips(input_paths: Union[list, str]) -> list:
+def open_clips(input_paths: Union[list, str]) -> Union[list, VideoFileClip]:
     if isinstance(input_paths, str):
         return VideoFileClip(input_paths)
-
     elif isinstance(input_paths, list):
         return [VideoFileClip(input_path) for input_path in input_paths]
-
     raise TypeError

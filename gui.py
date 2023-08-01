@@ -13,67 +13,74 @@ class VideoEditorWindow(QWidget):
 
         self.setWindowTitle("Video Editor")
         self.setGeometry(100, 100, 800, 600)
-        self.mediaPlayer = QMediaPlayer(None)
 
-        videoWidget = QVideoWidget()
+        self.media_player = QMediaPlayer(None)
+        self.video_widget = QVideoWidget()
 
-        openButton = QPushButton("Open Video")
-        openButton.clicked.connect(self.openFile)
+        self.open_button = QPushButton("Open Video")  # <------
+        self.open_button.clicked.connect(self.open_file)
 
-        self.playButton = QPushButton()
-        self.playButton.setEnabled(False)
-        self.playButton.clicked.connect(self.playVideo)
+        self._set_up_play_button()
+        self._set_up_position_slider()
+        self._set_up_layout()
+        self._set_up_media_player()
 
-        self.positionSlider = QSlider(Qt.Orientation.Horizontal)
-        self.positionSlider.setRange(0, 0)
-        self.positionSlider.sliderMoved.connect(self.setPosition)
+    def _set_up_play_button(self):
+        self.play_button = QPushButton()
+        self.play_button.setEnabled(False)
+        self.play_button.clicked.connect(self.play_video)
 
-        controlLayout = QHBoxLayout()
-        controlLayout.addWidget(openButton)
-        controlLayout.addWidget(self.playButton)
-        controlLayout.addWidget(self.positionSlider)
+    def _set_up_position_slider(self):
+        self.position_slider = QSlider(Qt.Orientation.Horizontal)
+        self.position_slider.setRange(0, 0)
+        self.position_slider.sliderMoved.connect(self.set_position)
 
-        layout = QVBoxLayout()
-        layout.addWidget(videoWidget)
-        layout.addLayout(controlLayout)
+    def _set_up_layout(self):
+        control_layout = QHBoxLayout()
+        control_layout.addWidget(self.open_button)
+        control_layout.addWidget(self.play_button)
+        control_layout.addWidget(self.position_slider)
+        main_layout = QVBoxLayout()
+        main_layout.addWidget(self.video_widget)
+        main_layout.addLayout(control_layout)
+        self.setLayout(main_layout)
 
-        self.setLayout(layout)
+    def _set_up_media_player(self):
+        self.media_player.setVideoOutput(self.video_widget)
+        self.media_player.sourceChanged.connect(self.media_state_changed)
+        self.media_player.positionChanged.connect(self.position_changed)
+        self.media_player.durationChanged.connect(self.duration_changed)
 
-        self.mediaPlayer.setVideoOutput(videoWidget)
-        self.mediaPlayer.sourceChanged.connect(self.mediaStateChanged)
-        self.mediaPlayer.positionChanged.connect(self.positionChanged)
-        self.mediaPlayer.durationChanged.connect(self.durationChanged)
+    def open_file(self):
+        file_path, _ = QFileDialog.getOpenFileName(self, "Open Video")
+        if file_path != '':
+            self.media_player.setSource(QUrl.fromLocalFile(file_path))
+            self.play_button.setEnabled(True)
 
-    def openFile(self):
-        filePath, _ = QFileDialog.getOpenFileName(self, "Open Video")
-        if filePath != '':
-            self.mediaPlayer.setSource(QUrl.fromLocalFile(filePath))
-            self.playButton.setEnabled(True)
-
-    def playVideo(self):
-        if self.mediaPlayer.isPlaying():
-            self.mediaPlayer.pause()
+    def play_video(self):
+        if self.media_player.isPlaying():
+            self.media_player.pause()
         else:
-            self.mediaPlayer.play()
+            self.media_player.play()
 
-    def mediaStateChanged(self, state):
-        if self.mediaPlayer.isPlaying():
-            self.playButton.setIcon(
+    def media_state_changed(self):
+        if self.media_player.isPlaying():
+            self.play_button.setIcon(
                 self.style().standardIcon(QStyle.StandardPixmap.SP_MediaPause)
             )
         else:
-            self.playButton.setIcon(
+            self.play_button.setIcon(
                 self.style().standardIcon(QStyle.StandardPixmap.SP_MediaPlay)
             )
 
-    def positionChanged(self, position):
-        self.positionSlider.setValue(position)
+    def position_changed(self, position):
+        self.position_slider.setValue(position)
 
-    def durationChanged(self, duration):
-        self.positionSlider.setRange(0, duration)
+    def duration_changed(self, duration):
+        self.position_slider.setRange(0, duration)
 
-    def setPosition(self, position):
-        self.mediaPlayer.setPosition(position)
+    def set_position(self, position):
+        self.media_player.setPosition(position)
 
 
 def run_gui():

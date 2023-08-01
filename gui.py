@@ -1,9 +1,15 @@
+from video_editor import \
+    merge_clips, trim_clip, set_clip_speed, \
+    save_clip, open_clips
+from moviepy.editor import VideoFileClip
 from PyQt6.QtCore import Qt, QUrl
+from PyQt6.QtGui import QAction, QIcon
 from PyQt6.QtWidgets import \
     QApplication, QWidget, QVBoxLayout, QPushButton, QFileDialog, \
-    QLabel, QSlider, QStyle, QSizePolicy, QHBoxLayout
+    QLabel, QSlider, QStyle, QSizePolicy, QHBoxLayout, QMenu, QMenuBar, QToolBar, QMessageBox
 from PyQt6.QtMultimediaWidgets import QVideoWidget
 from PyQt6.QtMultimedia import QMediaPlayer
+from message import *
 import sys
 
 
@@ -14,16 +20,26 @@ class VideoEditorWindow(QWidget):
         self.setWindowTitle("Video Editor")
         self.setGeometry(100, 100, 800, 600)
 
+        self.current_video = None
+
         self.media_player = QMediaPlayer(None)
         self.video_widget = QVideoWidget()
-
-        self.open_button = QPushButton("Open Video")  # <------
-        self.open_button.clicked.connect(self.open_file)
 
         self._set_up_play_button()
         self._set_up_position_slider()
         self._set_up_layout()
         self._set_up_media_player()
+        self._set_up_menu_bar()
+
+    def _set_up_menu_bar(self):
+        self.menu_bar = QMenuBar(self)
+        self.menu_bar.setNativeMenuBar(True)
+
+        file_menu = QMenu("&File", self)
+        self.menu_bar.addMenu(file_menu)
+
+        file_menu.addAction('Open', self.open_file)
+        file_menu.addAction('Save', self.save_file)
 
     def _set_up_play_button(self):
         self.play_button = QPushButton()
@@ -37,7 +53,6 @@ class VideoEditorWindow(QWidget):
 
     def _set_up_layout(self):
         control_layout = QHBoxLayout()
-        control_layout.addWidget(self.open_button)
         control_layout.addWidget(self.play_button)
         control_layout.addWidget(self.position_slider)
         main_layout = QVBoxLayout()
@@ -52,10 +67,24 @@ class VideoEditorWindow(QWidget):
         self.media_player.durationChanged.connect(self.duration_changed)
 
     def open_file(self):
-        file_path, _ = QFileDialog.getOpenFileName(self, "Open Video")
-        if file_path != '':
+        file_path, _ = QFileDialog.getOpenFileName(self)
+        try:
             self.media_player.setSource(QUrl.fromLocalFile(file_path))
             self.play_button.setEnabled(True)
+            self.current_video = open_clips(file_path)
+        except IOError:
+            raise_wrong_path_error(file_path)
+
+    def save_file(self):
+        file_path, _ = QFileDialog.getSaveFileName(self)
+        try:
+            save_clip(self.current_video, file_path)
+        except IOError:
+            raise_no_file_error()
+        except ValueError:
+            raise_wrong_path_error(file_path)
+        else:
+            get_success_message(file_path)
 
     def play_video(self):
         if self.media_player.isPlaying():

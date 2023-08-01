@@ -19,6 +19,9 @@ def set_clip_speed(clip: VideoFileClip, speed: int) -> VideoFileClip:
 
 
 def save_clip(clip: VideoFileClip, output_path: str) -> None:
+    if clip is None:
+        raise FileNotFoundError
+
     clip.write_videofile(output_path)
 
 

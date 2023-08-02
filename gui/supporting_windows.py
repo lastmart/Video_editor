@@ -1,8 +1,7 @@
 from PyQt6 import QtWidgets
-from PyQt6.QtWidgets import QApplication, QDialog, QDialogButtonBox, \
-    QVBoxLayout, QLabel, QHBoxLayout
+from PyQt6.QtWidgets import \
+    QDialog, QDialogButtonBox, QVBoxLayout, QHBoxLayout
 from PyQt6.QtCore import QTime
-import sys
 
 
 class TrimDialogWindow(QDialog):
@@ -19,7 +18,7 @@ class TrimDialogWindow(QDialog):
         end_text = self._get_text_label("end time")
 
         self._set_up_time_edit_widgets()
-        choice_button = self._get_choice_button()
+        choice_button = _get_choice_button(self)
 
         self._set_up_layouts(choice_button, end_text, main_text, start_text)
 
@@ -36,16 +35,6 @@ class TrimDialogWindow(QDialog):
 
         self.end_edit = QtWidgets.QTimeEdit(self)
         self.end_edit.setDisplayFormat("mm:ss")
-
-    def _get_choice_button(self):
-        choice_button = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok |
-            QDialogButtonBox.StandardButton.Cancel
-        )
-        choice_button.accepted.connect(self.accept)
-        choice_button.rejected.connect(self.reject)
-
-        return choice_button
 
     def _set_up_layouts(self, choice_button, end_text, main_text, start_text):
         start_layout = QHBoxLayout()
@@ -82,7 +71,7 @@ class SetSpeedDialogWindow(QDialog):
         postfix_text = self._get_text_label("X")
 
         self._set_up_time_edit_widgets()
-        choice_button = self._get_choice_button()
+        choice_button = _get_choice_button(self)
 
         self._set_up_layouts(main_text, postfix_text, choice_button)
 
@@ -96,16 +85,6 @@ class SetSpeedDialogWindow(QDialog):
     def _set_up_time_edit_widgets(self):
         self.time_edit = QtWidgets.QTimeEdit(self)
         self.time_edit.setDisplayFormat("mm:ss")
-
-    def _get_choice_button(self):
-        choice_button = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok |
-            QDialogButtonBox.StandardButton.Cancel
-        )
-        choice_button.accepted.connect(self.accept)
-        choice_button.rejected.connect(self.reject)
-
-        return choice_button
 
     def _set_up_layouts(self, main_text, postfix_text, choice_button):
         time_edit_layout = QHBoxLayout()
@@ -121,6 +100,17 @@ class SetSpeedDialogWindow(QDialog):
 
     def get_speed(self) -> QTime:
         return self.time_edit.time()
+
+
+def _get_choice_button(obj: QDialog):
+    choice_button = QDialogButtonBox(
+        QDialogButtonBox.StandardButton.Ok |
+        QDialogButtonBox.StandardButton.Cancel
+    )
+    choice_button.accepted.connect(obj.accept)
+    choice_button.rejected.connect(obj.reject)
+
+    return choice_button
 
 
 def run_trim_dialog_window() -> list:

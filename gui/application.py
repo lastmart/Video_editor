@@ -3,16 +3,13 @@ from video_editor import \
     save_clip, open_clips
 from supporting_windows import \
     run_trim_dialog_window, run_set_speed_dialog_window
-from moviepy.editor import VideoFileClip
-from PyQt6.QtCore import Qt, QUrl, QTime
-from PyQt6.QtGui import QAction, QIcon
+from PyQt6.QtCore import Qt, QUrl
 from PyQt6.QtWidgets import \
     QApplication, QWidget, QVBoxLayout, QPushButton, QFileDialog, \
-    QLabel, QSlider, QStyle, QSizePolicy, QHBoxLayout, QMenu, QMenuBar, \
-    QToolBar, QMessageBox, QDialog
+    QSlider, QStyle, QHBoxLayout, QMenu, QMenuBar
 from PyQt6.QtMultimediaWidgets import QVideoWidget
 from PyQt6.QtMultimedia import QMediaPlayer
-from base import BASE_PATH_TO_SAVE
+from utils import BASE_PATH_TO_SAVE
 from message import *
 import sys
 
@@ -86,6 +83,9 @@ class VideoEditorWindow(QWidget):
     def open_file(self):
         file_path, _ = QFileDialog.getOpenFileName(self)
 
+        if file_path == "":
+            return
+
         try:
             self.media_player.setSource(QUrl.fromLocalFile(file_path))
             self.play_button.setEnabled(True)
@@ -95,6 +95,9 @@ class VideoEditorWindow(QWidget):
 
     def save_file(self):
         file_path, _ = QFileDialog.getSaveFileName(self)
+
+        if file_path == "":
+            return
 
         try:
             save_clip(self.current_video, file_path)
@@ -107,6 +110,9 @@ class VideoEditorWindow(QWidget):
 
     def merge_with(self):
         file_paths, _ = QFileDialog.getOpenFileNames(self)
+
+        if len(file_paths) == 0:
+            return
 
         videos = [self.current_video]
         for file_path in file_paths:

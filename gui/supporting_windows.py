@@ -1,7 +1,8 @@
 from PyQt6 import QtWidgets
 from PyQt6.QtWidgets import \
-    QDialog, QDialogButtonBox, QVBoxLayout, QHBoxLayout
+    QDialog, QDialogButtonBox, QVBoxLayout, QHBoxLayout, QWidget
 from PyQt6.QtCore import QTime
+from typing import Union
 
 
 class TrimDialogWindow(QDialog):
@@ -11,23 +12,16 @@ class TrimDialogWindow(QDialog):
         self.setWindowTitle("trim dialog")
         self.setMinimumWidth(250)
 
-        main_text = self._get_text_label(
-            "Select the fragment that will remain:"
+        main_text = _get_text_label(
+            self, "Select the fragment that will remain:"
         )
-        start_text = self._get_text_label("start time")
-        end_text = self._get_text_label("end time")
+        start_text = _get_text_label(self, "start time")
+        end_text = _get_text_label(self, "end time")
 
         self._set_up_time_edit_widgets()
         choice_button = _get_choice_button(self)
 
         self._set_up_layouts(choice_button, end_text, main_text, start_text)
-
-    def _get_text_label(self, text):
-        label = QtWidgets.QLabel(self)
-        label.setText(text)
-        label.adjustSize()
-
-        return label
 
     def _set_up_time_edit_widgets(self):
         self.start_edit = QtWidgets.QTimeEdit(self)
@@ -65,22 +59,15 @@ class SetSpeedDialogWindow(QDialog):
         self.setWindowTitle("set speed dialog")
         self.setMinimumWidth(250)
 
-        main_text = self._get_text_label(
-            "Set new video speed:"
+        main_text = _get_text_label(
+            self, "Set new video speed:"
         )
-        postfix_text = self._get_text_label("X")
+        postfix_text = _get_text_label(self, "X")
 
         self._set_up_time_edit_widgets()
         choice_button = _get_choice_button(self)
 
         self._set_up_layouts(main_text, postfix_text, choice_button)
-
-    def _get_text_label(self, text):
-        label = QtWidgets.QLabel(self)
-        label.setText(text)
-        label.adjustSize()
-
-        return label
 
     def _set_up_time_edit_widgets(self):
         self.time_edit = QtWidgets.QTimeEdit(self)
@@ -100,6 +87,14 @@ class SetSpeedDialogWindow(QDialog):
 
     def get_speed(self) -> QTime:
         return self.time_edit.time()
+
+
+def _get_text_label(obj: Union[QDialog, QWidget], text: str):
+    label = QtWidgets.QLabel(obj)
+    label.setText(text)
+    label.adjustSize()
+
+    return label
 
 
 def _get_choice_button(obj: QDialog):

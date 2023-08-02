@@ -2,7 +2,7 @@ from video_editor import \
     merge_clips, trim_clip, set_clip_speed, \
     save_clip, open_clips
 from supporting_windows import \
-    run_trim_dialog_window, run_set_speed_dialog_window
+    run_trim_dialog_window, run_set_speed_dialog_window, _get_text_label
 from PyQt6.QtCore import Qt, QUrl
 from PyQt6.QtWidgets import \
     QApplication, QWidget, QVBoxLayout, QPushButton, QFileDialog, \
@@ -19,7 +19,7 @@ class VideoEditorWindow(QWidget):
         super().__init__()
 
         self.setWindowTitle("Video Editor")
-        self.setGeometry(100, 100, 800, 600)
+        self.setGeometry(100, 100, 900, 600)
 
         self.current_video = None
 
@@ -27,6 +27,7 @@ class VideoEditorWindow(QWidget):
         self.video_widget = QVideoWidget()
 
         self._set_up_play_button()
+        self.prefix_text = _get_text_label(self, "00:00")
         self._set_up_position_slider()
         self._set_up_layouts()
         self._set_up_media_player()
@@ -62,6 +63,7 @@ class VideoEditorWindow(QWidget):
     def _set_up_layouts(self):
         control_layout = QHBoxLayout()
         control_layout.addWidget(self.play_button)
+        control_layout.addWidget(self.prefix_text)
         control_layout.addWidget(self.position_slider)
 
         main_layout = QVBoxLayout()
@@ -73,8 +75,8 @@ class VideoEditorWindow(QWidget):
     def _set_up_media_player(self):
         self.media_player.setVideoOutput(self.video_widget)
         self.media_player.sourceChanged.connect(self._media_state_changed)
-        self.media_player.positionChanged.connect(self._position_changed)
-        self.media_player.durationChanged.connect(self._duration_changed)
+        self.media_player.positionChanged.connect(self._update_time_dependent)
+        self.media_player.durationChanged.connect(self._change_slider_duration)
 
     def _play_resulting_video(self):
         save_clip(self.current_video, BASE_PATH_TO_SAVE)
@@ -187,14 +189,24 @@ class VideoEditorWindow(QWidget):
                 self.style().standardIcon(QStyle.StandardPixmap.SP_MediaPlay)
             )
 
-    def _position_changed(self, position):
-        self.position_slider.setValue(position)
-
-    def _duration_changed(self, duration):
-        self.position_slider.setRange(0, duration)
-
     def _set_position(self, position):
         self.media_player.setPosition(position)
+
+    def _change_slider_duration(self, duration):
+        self.position_slider.setRange(0, duration)
+
+    def _update_slider_position(self, position):
+        self.position_slider.setValue(position)
+
+    def _update_prefix_text(self, position):
+        minutes = int(position / 60000)
+        seconds = int((position / 1000) % 60)
+
+        self.prefix_text.setText(f"{minutes:02d}:{seconds:02d}")
+
+    def _update_time_dependent(self, position):
+        self._update_prefix_text(position)
+        self._update_slider_position(position)
 
 
 def run_gui():

@@ -6,7 +6,8 @@ from PyQt6.QtCore import Qt, QUrl
 from PyQt6.QtGui import QAction, QIcon
 from PyQt6.QtWidgets import \
     QApplication, QWidget, QVBoxLayout, QPushButton, QFileDialog, \
-    QLabel, QSlider, QStyle, QSizePolicy, QHBoxLayout, QMenu, QMenuBar, QToolBar, QMessageBox
+    QLabel, QSlider, QStyle, QSizePolicy, QHBoxLayout, QMenu, QMenuBar, \
+    QToolBar, QMessageBox, QDialog
 from PyQt6.QtMultimediaWidgets import QVideoWidget
 from PyQt6.QtMultimedia import QMediaPlayer
 from base import BASE_PATH_TO_SAVE
@@ -46,6 +47,7 @@ class VideoEditorWindow(QWidget):
         self.menu_bar.addMenu(edit_menu)
 
         edit_menu.addAction("Merge with", self.merge_with)
+        #edit_menu.addAction("Trim", self.trim)
 
     def _set_up_play_button(self):
         self.play_button = QPushButton()
@@ -108,6 +110,9 @@ class VideoEditorWindow(QWidget):
         self.current_video = merge_clips(videos)
         save_clip(self.current_video, BASE_PATH_TO_SAVE)
         self.media_player.setSource(QUrl.fromLocalFile(BASE_PATH_TO_SAVE))
+
+    def trim(self):
+        trim_dialog_window = QDialog()
 
     def play_video(self):
         if self.media_player.isPlaying():

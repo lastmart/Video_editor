@@ -1,7 +1,8 @@
 from video_editor import \
     merge_clips, trim_clip, set_clip_speed, \
     save_clip, open_clips
-from supporting_windows import run_trim_dialog_window
+from supporting_windows import \
+    run_trim_dialog_window, run_set_speed_dialog_window
 from moviepy.editor import VideoFileClip
 from PyQt6.QtCore import Qt, QUrl, QTime
 from PyQt6.QtGui import QAction, QIcon
@@ -49,6 +50,7 @@ class VideoEditorWindow(QWidget):
 
         edit_menu.addAction("Merge with", self.merge_with)
         edit_menu.addAction("Trim", self.trim)
+        edit_menu.addAction("Set speed", self.set_speed)
 
     def _set_up_play_button(self):
         self.play_button = QPushButton()
@@ -77,7 +79,7 @@ class VideoEditorWindow(QWidget):
         self.media_player.positionChanged.connect(self._position_changed)
         self.media_player.durationChanged.connect(self._duration_changed)
 
-    def _play_result_video(self):
+    def _play_resulting_video(self):
         save_clip(self.current_video, BASE_PATH_TO_SAVE)
         self.media_player.setSource(QUrl.fromLocalFile(BASE_PATH_TO_SAVE))
 
@@ -119,7 +121,7 @@ class VideoEditorWindow(QWidget):
         except FileNotFoundError:
             raise_no_file_error()
         else:
-            self._play_result_video()
+            self._play_resulting_video()
 
     def trim(self):
         fragment_time = run_trim_dialog_window()
@@ -142,7 +144,26 @@ class VideoEditorWindow(QWidget):
         except IOError:
             raise_wrong_time_error()
         else:
-            self._play_result_video()
+            self._play_resulting_video()
+
+    def set_speed(self):
+        speed = run_set_speed_dialog_window()
+
+        if speed is None:
+            return
+
+        speed_float = speed.minute() + speed.second()/10
+
+        try:
+            self.current_video = set_clip_speed(
+                self.current_video, speed_float
+            )
+        except FileNotFoundError:
+            raise_no_file_error()
+        except ZeroDivisionError:
+            raise_wrong_speed_error()
+        else:
+            self._play_resulting_video()
 
     def _play_video(self):
         if self.media_player.isPlaying():

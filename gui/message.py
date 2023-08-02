@@ -17,6 +17,11 @@ def raise_wrong_time_error():
     get_base_message(text, MessageType.ERROR)
 
 
+def raise_wrong_speed_error():
+    text = "Speed is incorrect"
+    get_base_message(text, MessageType.ERROR)
+
+
 def get_success_message(file_path):
     text = f"The file was successfully saved to the path:\n'{file_path}'"
     get_base_message(text, MessageType.SUCCESS)

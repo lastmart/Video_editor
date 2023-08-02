@@ -27,7 +27,7 @@ def trim_clip(
     return clip.subclip(start_time, end_time)
 
 
-def set_clip_speed(clip: VideoFileClip, speed: int) -> VideoFileClip:
+def set_clip_speed(clip: VideoFileClip, speed: float) -> VideoFileClip:
     if clip is None:
         raise FileNotFoundError
 

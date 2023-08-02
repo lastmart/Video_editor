@@ -9,6 +9,7 @@ from PyQt6.QtWidgets import \
     QLabel, QSlider, QStyle, QSizePolicy, QHBoxLayout, QMenu, QMenuBar, QToolBar, QMessageBox
 from PyQt6.QtMultimediaWidgets import QVideoWidget
 from PyQt6.QtMultimedia import QMediaPlayer
+from base import BASE_PATH_TO_SAVE
 from message import *
 import sys
 
@@ -38,8 +39,13 @@ class VideoEditorWindow(QWidget):
         file_menu = QMenu("&File", self)
         self.menu_bar.addMenu(file_menu)
 
-        file_menu.addAction('Open', self.open_file)
-        file_menu.addAction('Save', self.save_file)
+        file_menu.addAction("Open", self.open_file)
+        file_menu.addAction("Save", self.save_file)
+
+        edit_menu = QMenu("&Edit", self)
+        self.menu_bar.addMenu(edit_menu)
+
+        edit_menu.addAction("Merge with", self.merge_with)
 
     def _set_up_play_button(self):
         self.play_button = QPushButton()
@@ -68,6 +74,7 @@ class VideoEditorWindow(QWidget):
 
     def open_file(self):
         file_path, _ = QFileDialog.getOpenFileName(self)
+
         try:
             self.media_player.setSource(QUrl.fromLocalFile(file_path))
             self.play_button.setEnabled(True)
@@ -77,6 +84,7 @@ class VideoEditorWindow(QWidget):
 
     def save_file(self):
         file_path, _ = QFileDialog.getSaveFileName(self)
+
         try:
             save_clip(self.current_video, file_path)
         except IOError:
@@ -85,6 +93,21 @@ class VideoEditorWindow(QWidget):
             raise_wrong_path_error(file_path)
         else:
             get_success_message(file_path)
+
+    def merge_with(self):
+        file_paths, _ = QFileDialog.getOpenFileNames(self)
+
+        videos = [self.current_video]
+        for file_path in file_paths:
+            try:
+                videos.append(open_clips(file_path))
+            except IOError:
+                raise_wrong_path_error(file_path)
+                break
+
+        self.current_video = merge_clips(videos)
+        save_clip(self.current_video, BASE_PATH_TO_SAVE)
+        self.media_player.setSource(QUrl.fromLocalFile(BASE_PATH_TO_SAVE))
 
     def play_video(self):
         if self.media_player.isPlaying():

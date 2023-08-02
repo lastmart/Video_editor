@@ -1,8 +1,9 @@
 from video_editor import \
     merge_clips, trim_clip, set_clip_speed, \
     save_clip, open_clips
+from supporting_windows import run_trim_dialog_window
 from moviepy.editor import VideoFileClip
-from PyQt6.QtCore import Qt, QUrl
+from PyQt6.QtCore import Qt, QUrl, QTime
 from PyQt6.QtGui import QAction, QIcon
 from PyQt6.QtWidgets import \
     QApplication, QWidget, QVBoxLayout, QPushButton, QFileDialog, \
@@ -29,7 +30,7 @@ class VideoEditorWindow(QWidget):
 
         self._set_up_play_button()
         self._set_up_position_slider()
-        self._set_up_layout()
+        self._set_up_layouts()
         self._set_up_media_player()
         self._set_up_menu_bar()
 
@@ -47,32 +48,38 @@ class VideoEditorWindow(QWidget):
         self.menu_bar.addMenu(edit_menu)
 
         edit_menu.addAction("Merge with", self.merge_with)
-        #edit_menu.addAction("Trim", self.trim)
+        edit_menu.addAction("Trim", self.trim)
 
     def _set_up_play_button(self):
         self.play_button = QPushButton()
         self.play_button.setEnabled(False)
-        self.play_button.clicked.connect(self.play_video)
+        self.play_button.clicked.connect(self._play_video)
 
     def _set_up_position_slider(self):
         self.position_slider = QSlider(Qt.Orientation.Horizontal)
         self.position_slider.setRange(0, 0)
-        self.position_slider.sliderMoved.connect(self.set_position)
+        self.position_slider.sliderMoved.connect(self._set_position)
 
-    def _set_up_layout(self):
+    def _set_up_layouts(self):
         control_layout = QHBoxLayout()
         control_layout.addWidget(self.play_button)
         control_layout.addWidget(self.position_slider)
+
         main_layout = QVBoxLayout()
         main_layout.addWidget(self.video_widget)
         main_layout.addLayout(control_layout)
+
         self.setLayout(main_layout)
 
     def _set_up_media_player(self):
         self.media_player.setVideoOutput(self.video_widget)
-        self.media_player.sourceChanged.connect(self.media_state_changed)
-        self.media_player.positionChanged.connect(self.position_changed)
-        self.media_player.durationChanged.connect(self.duration_changed)
+        self.media_player.sourceChanged.connect(self._media_state_changed)
+        self.media_player.positionChanged.connect(self._position_changed)
+        self.media_player.durationChanged.connect(self._duration_changed)
+
+    def _play_result_video(self):
+        save_clip(self.current_video, BASE_PATH_TO_SAVE)
+        self.media_player.setSource(QUrl.fromLocalFile(BASE_PATH_TO_SAVE))
 
     def open_file(self):
         file_path, _ = QFileDialog.getOpenFileName(self)
@@ -107,20 +114,43 @@ class VideoEditorWindow(QWidget):
                 raise_wrong_path_error(file_path)
                 break
 
-        self.current_video = merge_clips(videos)
-        save_clip(self.current_video, BASE_PATH_TO_SAVE)
-        self.media_player.setSource(QUrl.fromLocalFile(BASE_PATH_TO_SAVE))
+        try:
+            self.current_video = merge_clips(videos)
+        except FileNotFoundError:
+            raise_no_file_error()
+        else:
+            self._play_result_video()
 
     def trim(self):
-        trim_dialog_window = QDialog()
+        fragment_time = run_trim_dialog_window()
 
-    def play_video(self):
+        if fragment_time is None:
+            return
+
+        start = fragment_time[0]
+        end = fragment_time[1]
+
+        start_time = (start.minute(), start.second())
+        end_time = (end.minute(), end.second())
+
+        try:
+            self.current_video = trim_clip(
+                self.current_video, start_time, end_time
+            )
+        except FileNotFoundError:
+            raise_no_file_error()
+        except IOError:
+            raise_wrong_time_error()
+        else:
+            self._play_result_video()
+
+    def _play_video(self):
         if self.media_player.isPlaying():
             self.media_player.pause()
         else:
             self.media_player.play()
 
-    def media_state_changed(self):
+    def _media_state_changed(self):
         if self.media_player.isPlaying():
             self.play_button.setIcon(
                 self.style().standardIcon(QStyle.StandardPixmap.SP_MediaPause)
@@ -130,13 +160,13 @@ class VideoEditorWindow(QWidget):
                 self.style().standardIcon(QStyle.StandardPixmap.SP_MediaPlay)
             )
 
-    def position_changed(self, position):
+    def _position_changed(self, position):
         self.position_slider.setValue(position)
 
-    def duration_changed(self, duration):
+    def _duration_changed(self, duration):
         self.position_slider.setRange(0, duration)
 
-    def set_position(self, position):
+    def _set_position(self, position):
         self.media_player.setPosition(position)
 
 

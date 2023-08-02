@@ -11,21 +11,32 @@ class TrimDialogWindow(QDialog):
         self.setWindowTitle("trim dialog")
         self.setMinimumWidth(250)
 
-        main_text = QtWidgets.QLabel(self)
-        main_text.setText("Select the fragment to be trimmed:")
-        main_text.adjustSize()
+        main_text = self._get_text_label(
+            "Select the fragment that will remain:"
+        )
+        start_text = self._get_text_label("start time")
+        end_text = self._get_text_label("end time")
 
-        start_text = QtWidgets.QLabel(self)
-        start_text.setText("start time")
-        start_text.adjustSize()
+        self._set_up_time_edit_widgets()
+        choice_button = self._get_choice_button()
 
-        end_text = QtWidgets.QLabel(self)
-        end_text.setText("end time")
-        end_text.adjustSize()
+        self._set_up_layouts(choice_button, end_text, main_text, start_text)
 
-        start_edit = QtWidgets.QTimeEdit(self)
-        end_edit = QtWidgets.QTimeEdit(self)
+    def _get_text_label(self, text):
+        label = QtWidgets.QLabel(self)
+        label.setText(text)
+        label.adjustSize()
 
+        return label
+
+    def _set_up_time_edit_widgets(self):
+        self.start_edit = QtWidgets.QTimeEdit(self)
+        self.start_edit.setDisplayFormat("mm:ss")
+
+        self.end_edit = QtWidgets.QTimeEdit(self)
+        self.end_edit.setDisplayFormat("mm:ss")
+
+    def _get_choice_button(self):
         choice_button = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok |
             QDialogButtonBox.StandardButton.Cancel
@@ -33,13 +44,16 @@ class TrimDialogWindow(QDialog):
         choice_button.accepted.connect(self.accept)
         choice_button.rejected.connect(self.reject)
 
+        return choice_button
+
+    def _set_up_layouts(self, choice_button, end_text, main_text, start_text):
         start_layout = QHBoxLayout()
         start_layout.addWidget(start_text)
-        start_layout.addWidget(start_edit)
+        start_layout.addWidget(self.start_edit)
 
         end_layout = QHBoxLayout()
         end_layout.addWidget(end_text)
-        end_layout.addWidget(end_edit)
+        end_layout.addWidget(self.end_edit)
 
         main_layout = QVBoxLayout()
         main_layout.addWidget(main_text)
@@ -49,16 +63,15 @@ class TrimDialogWindow(QDialog):
 
         self.setLayout(main_layout)
 
+    def get_fragment_time(self) -> list:
+        print(self.start_edit.time().second())
+        return [self.start_edit.time(), self.end_edit.time()]
 
-def run_trim_dialog_window():
-    application = QApplication(sys.argv)
+
+def run_trim_dialog_window() -> list:
     window = TrimDialogWindow()
     window.show()
     if window.exec() == QDialog.DialogCode.Accepted:
-        print("Dialog accepted")
+        return window.get_fragment_time()
     else:
-        print("Dialog rejected")
-    sys.exit(application.exec())
-
-
-run_trim_dialog_window()
+        return None

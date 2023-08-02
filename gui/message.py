@@ -1,5 +1,5 @@
 from PyQt6.QtWidgets import QMessageBox
-from mode import MessageType
+from utils import MessageType
 
 
 def raise_wrong_path_error(file_path):
@@ -9,6 +9,11 @@ def raise_wrong_path_error(file_path):
 
 def raise_no_file_error():
     text = "There is no file to work with, please open it"
+    get_base_message(text, MessageType.ERROR)
+
+
+def raise_wrong_time_error():
+    text = "Start or end time is incorrect"
     get_base_message(text, MessageType.ERROR)
 
 

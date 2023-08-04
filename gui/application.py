@@ -1,6 +1,6 @@
 from video_editor import \
-    merge_clips, trim_clip, set_clip_speed, \
-    save_clip, open_clips
+    merge_and_save_videos, trim_and_save_video, \
+    set_video_speed_and_save, is_paths_correct, copy_video
 from supporting_windows import \
     run_trim_dialog_window, run_set_speed_dialog_window, _get_text_label
 from PyQt6.QtCore import Qt, QUrl
@@ -12,6 +12,7 @@ from PyQt6.QtMultimedia import QMediaPlayer
 from utils import BASE_PATH_TO_SAVE
 from message import *
 import sys
+import os
 
 
 class VideoEditorWindow(QWidget):
@@ -21,7 +22,7 @@ class VideoEditorWindow(QWidget):
         self.setWindowTitle("Video Editor")
         self.setGeometry(100, 100, 900, 600)
 
-        self.current_video = None
+        self.current_video_path = None
 
         self.media_player = QMediaPlayer(None)
         self.video_widget = QVideoWidget()
@@ -78,57 +79,64 @@ class VideoEditorWindow(QWidget):
         self.media_player.positionChanged.connect(self._update_time_dependent)
         self.media_player.durationChanged.connect(self._change_slider_duration)
 
-    def _play_resulting_video(self):
-        save_clip(self.current_video, BASE_PATH_TO_SAVE)
-        self.media_player.setSource(QUrl.fromLocalFile(BASE_PATH_TO_SAVE))
+    def _play_resulting_video(self): # <--------------------------------
+        self.media_player.setSource(
+            QUrl.fromLocalFile(self.current_video_path)
+        )
 
     def open_file(self):
-        file_path, _ = QFileDialog.getOpenFileName(self)
+        user_file_path, _ = QFileDialog.getOpenFileName(self)
 
-        if file_path == "":
+        if user_file_path == "":
             return
 
         try:
-            self.media_player.setSource(QUrl.fromLocalFile(file_path))
+            self.media_player.setSource(QUrl.fromLocalFile(user_file_path))
             self.play_button.setEnabled(True)
-            self.current_video = open_clips(file_path)
+            is_paths_correct(user_file_path)  # <-----------------------------------
+            #copy_video(user_file_path, BASE_PATH_TO_SAVE)
+            #self.current_video_path = BASE_PATH_TO_SAVE
+            self.current_video_path = user_file_path
         except IOError:
-            raise_wrong_path_error(file_path)
+            raise_wrong_path_error(user_file_path)
 
     def save_file(self):
-        file_path, _ = QFileDialog.getSaveFileName(self)
+        user_file_path, _ = QFileDialog.getSaveFileName(self)
 
-        if file_path == "":
+        if user_file_path == "":
             return
 
         try:
-            save_clip(self.current_video, file_path)
+            os.rename(self.current_video_path, user_file_path)
         except IOError:
             raise_no_file_error()
         except ValueError:
-            raise_wrong_path_error(file_path)
+            raise_wrong_path_error(user_file_path)
         else:
-            get_success_message(file_path)
+            get_success_message(user_file_path)
 
     def merge_with(self):
-        file_paths, _ = QFileDialog.getOpenFileNames(self)
+        user_file_paths, _ = QFileDialog.getOpenFileNames(self)
 
-        if len(file_paths) == 0:
+        if len(user_file_paths) == 0:
             return
 
-        videos = [self.current_video]
-        for file_path in file_paths:
-            try:
-                videos.append(open_clips(file_path))
-            except IOError:
-                raise_wrong_path_error(file_path)
-                break
+        file_paths = [self.current_video_path]
+        file_paths.extend(user_file_paths)
+
+        # for file_path in user_file_paths:
+        #     try:
+        #         videos.append(open_clips(file_path))
+        #     except IOError:
+        #         raise_wrong_path_error(file_path)
+        #         break
 
         try:
-            self.current_video = merge_clips(videos)
+            merge_and_save_videos(file_paths, BASE_PATH_TO_SAVE)
         except FileNotFoundError:
             raise_no_file_error()
         else:
+            self.current_video_path = BASE_PATH_TO_SAVE
             self._play_resulting_video()
 
     def trim(self):
@@ -144,14 +152,18 @@ class VideoEditorWindow(QWidget):
         end_time = (end.minute(), end.second())
 
         try:
-            self.current_video = trim_clip(
-                self.current_video, start_time, end_time
+            trim_and_save_video(
+                self.current_video_path,
+                start_time,
+                end_time,
+                BASE_PATH_TO_SAVE
             )
         except FileNotFoundError:
             raise_no_file_error()
         except IOError:
             raise_wrong_time_error()
         else:
+            self.current_video_path = BASE_PATH_TO_SAVE
             self._play_resulting_video()
 
     def set_speed(self):
@@ -163,14 +175,15 @@ class VideoEditorWindow(QWidget):
         speed_float = speed.minute() + speed.second()/10
 
         try:
-            self.current_video = set_clip_speed(
-                self.current_video, speed_float
+            set_video_speed_and_save(
+                self.current_video_path, speed_float, BASE_PATH_TO_SAVE
             )
         except FileNotFoundError:
             raise_no_file_error()
         except ZeroDivisionError:
             raise_wrong_speed_error()
         else:
+            self.current_video_path = BASE_PATH_TO_SAVE
             self._play_resulting_video()
 
     def _play_video(self):

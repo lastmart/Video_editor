@@ -118,6 +118,11 @@ def is_paths_correct(paths: Union[str, list[str]]) -> bool:
     return True
 
 
+def copy_video(input_path: str, output_path: str):
+    video = open_videos(input_path)
+    save_video(video, output_path)
+
+
 # if __name__ == '__main__':
     # in1: ffmpeg.Stream = ffmpeg.input(
     #     r"/mnt/c/Users/egore/OneDrive/Документы/python/python_task/ASCII_ART/document_5231008315256878506.mp4")

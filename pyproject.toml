@@ -9,6 +9,8 @@ readme = "README.md"
 python = "^3.11"
 moviepy = "^1.0.3"
 pyqt6 = "^6.5.2"
+ffmpeg = "^1.4"
+ffmpeg-python = "^0.2.0"
 
 
 [build-system]

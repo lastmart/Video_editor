@@ -33,7 +33,7 @@ def get_base_message(text: str, mode: MessageType):
         if mode is MessageType.ERROR \
         else base_message.setWindowTitle("Success")
     base_message.setText(text)
-    base_message.setIcon(QMessageBox.Icon.Warning) \
+    base_message.setIcon(QMessageBox.Icon.Critical) \
         if mode is MessageType.ERROR \
         else base_message.setIcon(QMessageBox.Icon.Information)
     base_message.setStandardButtons(QMessageBox.StandardButton.Ok)

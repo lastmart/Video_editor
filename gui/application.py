@@ -203,6 +203,8 @@ class VideoEditorWindow(QWidget):
         else:
             self.media_player.play()
 
+        self._change_play_button_icon()
+
     def _change_play_button_icon(self):
         if self.media_player.isPlaying():
             self.play_button.setIcon(

@@ -1,6 +1,4 @@
 from enum import Enum
-from os import getcwd
-from pathlib import Path
 
 
 class MessageType(Enum):
@@ -8,4 +6,6 @@ class MessageType(Enum):
     ERROR = 2
 
 
-BASE_PATH_TO_SAVE = str(Path(str(getcwd())) / 'gui' / 'cache' / 'temp.mp4')
+class OperationType(Enum):
+    Increase = 1
+    Decrease = 2

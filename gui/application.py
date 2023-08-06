@@ -119,83 +119,71 @@ class VideoEditorWindow(QWidget):
             raise_wrong_path_error(user_file_path)
         else:
             get_success_message(user_file_path)
-        finally:
-            self._play_resulting_video()
 
     def merge_with(self):
-        pass
+        user_file_paths, _ = QFileDialog.getOpenFileNames(self)
 
-        # user_file_paths, _ = QFileDialog.getOpenFileNames(self)
-        #
-        # if len(user_file_paths) == 0:
-        #     return
-        #
-        # file_paths = [self.current_video_path]
-        # file_paths.extend(user_file_paths)
-        #
-        # # for file_path in user_file_paths:
-        # #     try:
-        # #         videos.append(open_clips(file_path))
-        # #     except IOError:
-        # #         raise_wrong_path_error(file_path)
-        # #         break
-        #
-        # try:
-        #     merge_and_save_videos(file_paths, BASE_PATH_TO_SAVE)
-        # except FileNotFoundError:
-        #     raise_no_file_error()
-        # else:
-        #     self.current_video_path = BASE_PATH_TO_SAVE
-        #     self._play_resulting_video()
+        if len(user_file_paths) == 0:
+            return
+
+        file_paths = [self.cache_handler.get_current_path_to_look()]
+        file_paths.extend(user_file_paths)
+
+        try:
+            merge_and_save_videos(
+                file_paths, self.cache_handler.get_current_path_to_save()
+            )
+        except FileNotFoundError:
+            raise_no_file_error()
+        else:
+            self._play_resulting_video()
 
     def trim(self):
-        pass
-        # fragment_time = run_trim_dialog_window()
-        #
-        # if fragment_time is None:
-        #     return
-        #
-        # start = fragment_time[0]
-        # end = fragment_time[1]
-        #
-        # start_time = (start.minute(), start.second())
-        # end_time = (end.minute(), end.second())
-        #
-        # try:
-        #     trim_and_save_video(
-        #         self.current_video_path,
-        #         start_time,
-        #         end_time,
-        #         BASE_PATH_TO_SAVE
-        #     )
-        # except FileNotFoundError:
-        #     raise_no_file_error()
-        # except IOError:
-        #     raise_wrong_time_error()
-        # else:
-        #     self.current_video_path = BASE_PATH_TO_SAVE
-        #     self._play_resulting_video()
+        fragment_time = run_trim_dialog_window()
+
+        if fragment_time is None:
+            return
+
+        start = fragment_time[0]
+        end = fragment_time[1]
+
+        start_time = (start.minute(), start.second())
+        end_time = (end.minute(), end.second())
+
+        try:
+            trim_and_save_video(
+                self.cache_handler.get_current_path_to_look(),
+                start_time,
+                end_time,
+                self.cache_handler.get_current_path_to_save()
+            )
+        except FileNotFoundError:
+            raise_no_file_error()
+        except IOError:
+            raise_wrong_time_error()
+        else:
+            self._play_resulting_video()
 
     def set_speed(self):
-        pass
-        # speed = run_set_speed_dialog_window()
-        #
-        # if speed is None:
-        #     return
-        #
-        # speed_float = speed.minute() + speed.second()/10
-        #
-        # try:
-        #     set_video_speed_and_save(
-        #         self.current_video_path, speed_float, BASE_PATH_TO_SAVE
-        #     )
-        # except FileNotFoundError:
-        #     raise_no_file_error()
-        # except ZeroDivisionError:
-        #     raise_wrong_speed_error()
-        # else:
-        #     self.current_video_path = BASE_PATH_TO_SAVE
-        #     self._play_resulting_video()
+        speed = run_set_speed_dialog_window()
+
+        if speed is None:
+            return
+
+        speed_float = speed.minute() + speed.second()/10
+
+        try:
+            set_video_speed_and_save(
+                self.cache_handler.get_current_path_to_look(),
+                speed_float,
+                self.cache_handler.get_current_path_to_save()
+            )
+        except FileNotFoundError:
+            raise_no_file_error()
+        except ZeroDivisionError:
+            raise_wrong_speed_error()
+        else:
+            self._play_resulting_video()
 
     def _change_media_player_state(self):
         if self.media_player.isPlaying():

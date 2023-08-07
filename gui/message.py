@@ -1,5 +1,5 @@
 from PyQt6.QtWidgets import QMessageBox
-from utils import MessageType
+from .utils import MessageType
 
 
 def raise_wrong_path_error(file_path):

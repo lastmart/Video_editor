@@ -1,7 +1,7 @@
 from video_editor import \
     merge_and_save_videos, trim_and_save_video, \
     set_video_speed_and_save, is_paths_correct, copy_video
-from supporting_windows import \
+from .supporting_windows import \
     run_trim_dialog_window, run_set_speed_dialog_window, \
     run_close_event_dialog_window, run_undo_dialog_window,\
     _get_text_label
@@ -11,8 +11,8 @@ from PyQt6.QtWidgets import \
     QSlider, QStyle, QHBoxLayout, QMenu, QMenuBar
 from PyQt6.QtMultimediaWidgets import QVideoWidget
 from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput
-from cache_handler import CacheHandler
-from message import *
+from .cache_handler import CacheHandler
+from .message import *
 import sys
 
 
@@ -271,6 +271,3 @@ def run_gui():
     window = VideoEditorWindow()
     window.show()
     sys.exit(application.exec())
-
-
-run_gui()

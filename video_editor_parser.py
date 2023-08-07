@@ -1,4 +1,5 @@
 from video_editor import *
+from gui.application import run_gui
 import argparse
 
 
@@ -27,6 +28,10 @@ class Parser:
                                                   help="Set video speed"
                                                   )
         self._add_arguments_for_clip_speed_parser(clip_speed_parser)
+        gui_parser = subparsers.add_parser("gui",
+                                           help="Set video speed"
+                                           )
+        gui_parser.set_defaults(func=run_gui)
 
     def parse_args(self, args=None, namespace=None):
         return self.parser.parse_args(args, namespace)

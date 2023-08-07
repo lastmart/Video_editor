@@ -1,30 +1,39 @@
 from typing import Union
 from pathlib import Path
 import ffmpeg
+import sys
+from operator import floordiv
 
 
 def merge_and_save_videos(videos_paths: list[str], path_to_save: str,
-                          width: int = None, height: int = None) -> None:
+                          width: int = None, height: int = None,
+                          fps: int = None) -> None:
+    """
+    Merge video, and if one of the parameters is not specified: height, width or fps -
+    this parameter is taken from the first video in the list
+    """
     if len(videos_paths) < 2:
         raise ValueError(
             f'You can merge only two or more videos, but you got {len(videos_paths)}')
     if width is None or height is None:
-        stream_parameters = ffmpeg.probe(videos_paths[0])['streams']
-        width = stream_parameters[0].get('width',
-                                         stream_parameters[1].get('width'))
-        height = stream_parameters[0].get('height',
-                                          stream_parameters[1].get('height'))
-    save_video(merge_videos(open_videos(videos_paths), width, height),
+        first_video_information = get_information_about_video(videos_paths[0],
+                                                              'video')
+        width = first_video_information['width']
+        height = first_video_information['height']
+        fps = first_video_information["avg_frame_rate"]
+        fps = floordiv(*map(int, fps.split('/')))
+    save_video(merge_videos(open_videos(videos_paths), width, height, fps),
                path_to_save)
 
 
 def merge_videos(videos: list[ffmpeg.Stream], width: int,
-                 height: int) -> ffmpeg.nodes.Node:
+                 height: int, fps: int) -> ffmpeg.nodes.Node:
     concat_params = []
     for video in videos:
         scaled_video = (ffmpeg
                         .filter(video.video, 'scale', h=height, w=width)
-                        .filter('setsar', sar="1/1"))
+                        .filter('setsar', sar="1/1")
+                        .filter('fps', fps=fps))
         concat_params.extend((scaled_video, video.audio))
     return ffmpeg.concat(*concat_params, a=1).node
 
@@ -83,7 +92,7 @@ def set_video_speed(input_video: ffmpeg.Stream, speed: int) -> ffmpeg.Stream:
 
 
 def save_video(video: Union[ffmpeg.Stream, ffmpeg.nodes.Node],
-               output_path: str) -> None:
+               output_path: str, overwrite: bool = False) -> None:
     if not is_paths_correct(output_path):
         raise ValueError
     if isinstance(video, ffmpeg.Stream):
@@ -93,6 +102,8 @@ def save_video(video: Union[ffmpeg.Stream, ffmpeg.nodes.Node],
         out = ffmpeg.output(video[0], video[1], output_path, format='mp4')
     else:
         raise ValueError('')
+    if overwrite:
+        out.overwrite_output()
     out.run()
 
 
@@ -120,55 +131,41 @@ def is_paths_correct(paths: Union[str, list[str]]) -> bool:
 
 def copy_video(input_path: str, output_path: str):
     video = open_videos(input_path)
-    save_video(video, output_path)
+    save_video(video, output_path, True)
 
 
-# if __name__ == '__main__':
-    # in1: ffmpeg.Stream = ffmpeg.input(
-    #     r"/mnt/c/Users/egore/OneDrive/Документы/python/python_task/ASCII_ART/document_5231008315256878506.mp4")
-    # video = ffmpeg.filter(in1.video, 'scale', h=720, w=1280)  #.filter('setsar', sar="1/1")
-    # out = ffmpeg.output(video, in1.audio, r"/mnt/c/Users/egore/OneDrive/Документы/sampleCorrectSizeWithout.mp4")
-    # out.run()
-    # in2 = ffmpeg.input(
-    #     r"/mnt/c/Users/egore/OneDrive/Документы/python/python_task/Video_editor/resources/shrek_dancing.mp4")
-    # merge_and_save_videos([
-    #     r"/mnt/c/Users/egore/OneDrive/Документы/python/python_task/Video_editor/resources/fugu_eat_carrot.mp4",
-    #     r"/mnt/c/Users/egore/OneDrive/Документы/python/python_task/Video_editor/resources/shrek_dancing.mp4",
-    # ],
-    #     r"/mnt/c/Users/egore/OneDrive/Документы/12update.mp4"
-    # )
-    # print('\n' * 5)
+def get_information_about_video(file: str, stream_name: str) -> dict:
+    try:
+        probe = ffmpeg.probe(file)
+    except ffmpeg.Error as e:
+        print(e.stderr.decode(), file=sys.stderr)
+        raise e
+    video_stream = next((stream for stream in probe['streams'] if
+                         stream['codec_type'] == stream_name), None)
+    if video_stream is None:
+        raise FileNotFoundError(f'No video stream found in\n {file}')
+    return video_stream
 
 
-    # merge_and_save_videos([
-    #     r"/mnt/c/Users/egore/OneDrive/Документы/python/python_task/Video_editor/resources/fugu_eat_carrot.mp4",
-    #     r"/mnt/c/Users/egore/OneDrive/Документы/python/python_task/Video_editor/resources/shrek_dancing.mp4",
-    # ],
-    #     r"/mnt/c/Users/egore/OneDrive/Документы/2.mp4",
-    #     width=1280, height=720
-    # )
-
-    # video = in1.video.filter('setpts', '0.5*PTS')
-    # audio = in1.audio.filter('asetpts', '0.5*PTS').filter("atempo", 2)
-    # save_video(ffmpeg.concat(video, audio, v=1, a=1).node,
-    #            r"/mnt/c/Users/egore/OneDrive/Документы/good.mp4")
-
-    # a = ffmpeg.probe(r"/mnt/c/Users/egore/OneDrive/Документы/python/python_task/Video_editor/resources/shrek_dancing.mp4")
-    # print(a['streams'][0]['width'])
-    # print(a['streams'][0]['height'])
-    # v1 = ffmpeg.filter(in1.video, 'scale', h=720, w=1280).filter('setsar',
-    #                                                              sar="1/1")
-    # save_video(ffmpeg.concat(v1, in1.audio, in2.video, in2.audio, a=1).node,
-    #            r"/mnt/c/Users/egore/OneDrive/Документы/excellent1.mp4")
-
-
-    # merge_and_save_videos([
-    #     r"/mnt/c/Users/egore/OneDrive/Документы/python/python_task/ASCII_ART/document_5231008315256878506.mp4",
-    #     r"/mnt/c/Users/egore/OneDrive/Документы/1.mp4"],
-    #     r"/mnt/c/Users/egore/OneDrive/Документы/well.mp4")
-
-
-
-    # trim_and_save_video(r"/mnt/c/Users/egore/OneDrive/Документы/sampleCorrectSizeWithout.mp4", '01:00', '02:00', r"/mnt/c/Users/egore/OneDrive/Документы/well.mp4")
-
-    # set_video_speed_and_save(r"/mnt/c/Users/egore/OneDrive/Документы/python/python_task/Video_editor/resources/shrek_dancing.mp4", 0.5, r"/mnt/c/Users/egore/OneDrive/Документы/3.mp4")
+def generate_thumbnail(in_filename: str, out_filename: str, time: int,
+                       width: int) -> None:
+    """
+    Allows to get a frame from a video
+    :param in_filename: the absolute path to the video where you want the frame
+    :param out_filename: the absolute path to the image where you want to save the result (the format is also indicated in the path)
+    :param time: time in seconds to frame
+    :param width: the resulting frame width (the height is proportional to the parameters of the source video)
+    :return: None
+    """
+    try:
+        (
+            ffmpeg
+            .input(in_filename, ss=time)
+            .filter('scale', width, -1)
+            .output(out_filename, vframes=1)
+            .overwrite_output()
+            .run(capture_stdout=True, capture_stderr=True)
+        )
+    except ffmpeg.Error as e:
+        print(e.stderr.decode(), file=sys.stderr)
+        sys.exit(1)

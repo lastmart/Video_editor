@@ -53,6 +53,26 @@ class CacheHandler:
         )
         self.update_current_index(OperationType.Decrease)
 
+    def prepare_cache_folder(self) -> None:
+        """If the program was terminated incorrectly, the
+        cache may not be empty. This method clears the cache
+        in a special way before starting work with it
+        """
+
+        index = 1
+
+        while True:
+            current_path_to_remove = str(
+                self.BASE_PATH_TO_SAVE /
+                f'temp{index}.mp4'
+            )
+
+            if os.path.exists(current_path_to_remove):
+                os.remove(current_path_to_remove)
+                index += 1
+            else:
+                break
+
     def clear_cache(self) -> None:
         for index in range(1, self.current_index + 1):
             current_path_to_remove = str(

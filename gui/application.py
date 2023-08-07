@@ -24,10 +24,11 @@ class VideoEditorWindow(QWidget):
         self.setGeometry(100, 100, 900, 600)
 
         self.media_player = QMediaPlayer(None)
+        self.video_widget = QVideoWidget()
         self.audio_output = QAudioOutput()
 
-        self.video_widget = QVideoWidget()
         self.cache_handler = CacheHandler()
+        self.cache_handler.prepare_cache_folder()
 
         self._set_up_play_button()
         self.prefix_text = _get_text_label(self, "00:00")

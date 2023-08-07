@@ -3,7 +3,8 @@ from video_editor import \
     set_video_speed_and_save, is_paths_correct, copy_video
 from supporting_windows import \
     run_trim_dialog_window, run_set_speed_dialog_window, \
-    run_close_event_dialog_window, _get_text_label
+    run_close_event_dialog_window, run_undo_dialog_window,\
+    _get_text_label
 from PyQt6.QtCore import Qt, QUrl
 from PyQt6.QtWidgets import \
     QApplication, QWidget, QVBoxLayout, QPushButton, QFileDialog, \
@@ -51,9 +52,14 @@ class VideoEditorWindow(QWidget):
         edit_menu = QMenu("&Edit", self)
         self.menu_bar.addMenu(edit_menu)
 
-        edit_menu.addAction("Merge with", self.merge_with)
-        edit_menu.addAction("Trim", self.trim)
-        edit_menu.addAction("Set speed", self.set_speed)
+        tools_submenu = QMenu("&Tools", self)
+        edit_menu.addMenu(tools_submenu)
+
+        tools_submenu.addAction("Merge with", self.merge_with)
+        tools_submenu.addAction("Trim", self.trim)
+        tools_submenu.addAction("Set speed", self.set_speed)
+
+        edit_menu.addAction("Undo", self.undo)
 
     def _set_up_play_button(self):
         self.play_button = QPushButton()
@@ -92,6 +98,18 @@ class VideoEditorWindow(QWidget):
         )
         self.media_player.setAudioOutput(self.audio_output)
         self.play_button.setEnabled(True)
+
+    def undo(self):
+        need_to_undo = run_undo_dialog_window()
+
+        if need_to_undo:
+            try:
+                self.cache_handler.undo()
+            except FileNotFoundError:
+                raise_nothing_to_undo_error()
+            else:
+                self.have_unsaved_changes = True
+                self._play_resulting_video()
 
     def open_file(self):
         user_file_path, _ = QFileDialog.getOpenFileName(self)

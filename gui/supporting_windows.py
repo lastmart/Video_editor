@@ -89,15 +89,15 @@ class SetSpeedDialogWindow(QDialog):
         return self.time_edit.time()
 
 
-class CloseEventDialogWindow(QDialog):
-    def __init__(self):
+class AskConfirmationDialogWindow(QDialog):
+    def __init__(self, text: str):
         super().__init__()
 
         self.setWindowTitle("ask confirmation dialog")
         self.setMinimumWidth(250)
 
         main_text = _get_text_label(
-            self, "You have unsaved changes.\nAre you sure you want to exit?"
+            self, text
         )
         choice_button = _get_choice_button(self)
 
@@ -151,6 +151,14 @@ def run_set_speed_dialog_window() -> QTime:
 
 
 def run_close_event_dialog_window() -> bool:
-    window = CloseEventDialogWindow()
+    text = "You have unsaved changes.\nAre you sure you want to exit?"
+    window = AskConfirmationDialogWindow(text)
+    window.show()
+    return True if window.exec() == QDialog.DialogCode.Accepted else False
+
+
+def run_undo_dialog_window() -> bool:
+    text = "Are you sure you want to undo last action?"
+    window = AskConfirmationDialogWindow(text)
     window.show()
     return True if window.exec() == QDialog.DialogCode.Accepted else False

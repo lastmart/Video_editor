@@ -89,7 +89,31 @@ class SetSpeedDialogWindow(QDialog):
         return self.time_edit.time()
 
 
-def _get_text_label(obj: Union[QDialog, QWidget], text: str):
+class CloseEventDialogWindow(QDialog):
+    def __init__(self):
+        super().__init__()
+
+        self.setWindowTitle("ask confirmation dialog")
+        self.setMinimumWidth(250)
+
+        main_text = _get_text_label(
+            self, "You have unsaved changes.\nAre you sure you want to exit?"
+        )
+        choice_button = _get_choice_button(self)
+
+        self._set_up_layouts(main_text, choice_button)
+
+    def _set_up_layouts(self, main_text, choice_button):
+        main_layout = QVBoxLayout()
+        main_layout.addWidget(main_text)
+        main_layout.addWidget(choice_button)
+
+        self.setLayout(main_layout)
+
+
+def _get_text_label(
+    obj: Union[QDialog, QWidget], text: str
+) -> QtWidgets.QLabel:
     label = QtWidgets.QLabel(obj)
     label.setText(text)
     label.adjustSize()
@@ -124,3 +148,9 @@ def run_set_speed_dialog_window() -> QTime:
         return window.get_speed()
     else:
         return None
+
+
+def run_close_event_dialog_window() -> bool:
+    window = CloseEventDialogWindow()
+    window.show()
+    return True if window.exec() == QDialog.DialogCode.Accepted else False

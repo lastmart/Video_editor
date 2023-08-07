@@ -2,7 +2,8 @@ from video_editor import \
     merge_and_save_videos, trim_and_save_video, \
     set_video_speed_and_save, is_paths_correct, copy_video
 from supporting_windows import \
-    run_trim_dialog_window, run_set_speed_dialog_window, _get_text_label
+    run_trim_dialog_window, run_set_speed_dialog_window, \
+    run_close_event_dialog_window, _get_text_label
 from PyQt6.QtCore import Qt, QUrl
 from PyQt6.QtWidgets import \
     QApplication, QWidget, QVBoxLayout, QPushButton, QFileDialog, \
@@ -10,10 +11,8 @@ from PyQt6.QtWidgets import \
 from PyQt6.QtMultimediaWidgets import QVideoWidget
 from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput
 from cache_handler import CacheHandler
-from utils import OperationType
 from message import *
 import sys
-import os
 
 
 class VideoEditorWindow(QWidget):
@@ -29,6 +28,8 @@ class VideoEditorWindow(QWidget):
 
         self.cache_handler = CacheHandler()
         self.cache_handler.prepare_cache_folder()
+
+        self.have_unsaved_changes = False
 
         self._set_up_play_button()
         self.prefix_text = _get_text_label(self, "00:00")
@@ -81,6 +82,9 @@ class VideoEditorWindow(QWidget):
         self.media_player.sourceChanged.connect(self._change_play_button_icon)
         self.media_player.positionChanged.connect(self._update_time_dependent)
         self.media_player.durationChanged.connect(self._change_slider_duration)
+        self.media_player.mediaStatusChanged.connect(
+            self._process_media_status_changed
+        )
 
     def _play_resulting_video(self):
         self.media_player.setSource(
@@ -103,6 +107,7 @@ class VideoEditorWindow(QWidget):
         except IOError:
             raise_wrong_path_error(user_file_path)
         else:
+            self.have_unsaved_changes = False
             self._play_resulting_video()
 
     def save_file(self):
@@ -119,6 +124,7 @@ class VideoEditorWindow(QWidget):
         except ValueError:
             raise_wrong_path_error(user_file_path)
         else:
+            self.have_unsaved_changes = False
             get_success_message(user_file_path)
 
     def merge_with(self):
@@ -137,6 +143,7 @@ class VideoEditorWindow(QWidget):
         except FileNotFoundError:
             raise_no_file_error()
         else:
+            self.have_unsaved_changes = True
             self._play_resulting_video()
 
     def trim(self):
@@ -163,6 +170,7 @@ class VideoEditorWindow(QWidget):
         except IOError:
             raise_wrong_time_error()
         else:
+            self.have_unsaved_changes = True
             self._play_resulting_video()
 
     def set_speed(self):
@@ -184,7 +192,12 @@ class VideoEditorWindow(QWidget):
         except ZeroDivisionError:
             raise_wrong_speed_error()
         else:
+            self.have_unsaved_changes = True
             self._play_resulting_video()
+
+    def _process_media_status_changed(self, status: QMediaPlayer.MediaStatus):
+        if status == QMediaPlayer.MediaStatus.EndOfMedia:
+            self._change_play_button_icon()
 
     def _change_media_player_state(self):
         if self.media_player.isPlaying():
@@ -224,19 +237,15 @@ class VideoEditorWindow(QWidget):
         self._update_slider_position(position)
 
     def closeEvent(self, event):
-        closeWindow = self._ask_confirmation()
+        need_to_close_window = True
+        if self.have_unsaved_changes:
+            need_to_close_window = run_close_event_dialog_window()
 
-        if closeWindow:
+        if need_to_close_window:
             self.cache_handler.clear_cache()
             event.accept()
         else:
             event.ignore()
-
-    def _ask_confirmation(self) -> bool:
-        # Здесь можно показать диалоговое окно подтверждения
-        # или спросить у пользователя, хочет ли он выйти
-        # Верните True, если пользователь подтвержд
-        return True
 
 
 def run_gui():

@@ -7,6 +7,11 @@ def raise_wrong_path_error(file_path):
     get_base_message(text, MessageType.ERROR)
 
 
+def raise_save_error(file_path):
+    text = f"Can't save this path:'{file_path}'"
+    get_base_message(text, MessageType.ERROR)
+
+
 def raise_no_file_error():
     text = "There is no file to work with, please open it"
     get_base_message(text, MessageType.ERROR)
@@ -24,6 +29,13 @@ def raise_wrong_speed_error():
 
 def raise_nothing_to_undo_error():
     text = "There's nothing to undo here"
+    get_base_message(text, MessageType.ERROR)
+
+
+def raise_cache_error(file_path):
+    text = f"""An error occurred while clearing the cache.
+    Please clear it manually. Problem with path: 
+    '{file_path}'"""
     get_base_message(text, MessageType.ERROR)
 
 

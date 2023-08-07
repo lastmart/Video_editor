@@ -1,6 +1,6 @@
 from video_editor import \
     merge_and_save_videos, trim_and_save_video, \
-    set_video_speed_and_save, is_paths_correct, copy_video
+    set_video_speed_and_save, check_paths_correctness, copy_video
 from .supporting_windows import \
     run_trim_dialog_window, run_set_speed_dialog_window, \
     run_close_event_dialog_window, run_undo_dialog_window,\
@@ -107,6 +107,8 @@ class VideoEditorWindow(QWidget):
                 self.cache_handler.undo()
             except FileNotFoundError:
                 raise_nothing_to_undo_error()
+            except IOError as e:
+                raise_cache_error(e.__str__())
             else:
                 self.have_unsaved_changes = True
                 self._play_resulting_video()
@@ -118,7 +120,7 @@ class VideoEditorWindow(QWidget):
             return
 
         try:
-            is_paths_correct(user_file_path)
+            check_paths_correctness(user_file_path)
             copy_video(
                 user_file_path, self.cache_handler.get_current_path_to_save()
             )
@@ -129,23 +131,29 @@ class VideoEditorWindow(QWidget):
             self._play_resulting_video()
 
     def save_file(self):
+        if self.cache_handler.current_index == 0:
+            raise_no_file_error()
+            return
+
         user_file_path, _ = QFileDialog.getSaveFileName(self)
 
         if user_file_path == "":
             return
 
         try:
-            is_paths_correct(user_file_path)
+            check_paths_correctness(user_file_path)
             self.cache_handler.save_from_cache(user_file_path)
         except IOError:
-            raise_no_file_error()
-        except ValueError:
             raise_wrong_path_error(user_file_path)
         else:
             self.have_unsaved_changes = False
             get_success_message(user_file_path)
 
     def merge_with(self):
+        if self.cache_handler.current_index == 0:
+            raise_no_file_error()
+            return
+
         user_file_paths, _ = QFileDialog.getOpenFileNames(self)
 
         if len(user_file_paths) == 0:
@@ -158,13 +166,17 @@ class VideoEditorWindow(QWidget):
             merge_and_save_videos(
                 file_paths, self.cache_handler.get_current_path_to_save()
             )
-        except FileNotFoundError:
-            raise_no_file_error()
+        except IOError as e:
+            raise_wrong_path_error(e.__str__())
         else:
             self.have_unsaved_changes = True
             self._play_resulting_video()
 
     def trim(self):
+        if self.cache_handler.current_index == 0:
+            raise_no_file_error()
+            return
+
         fragment_time = run_trim_dialog_window()
 
         if fragment_time is None:
@@ -183,15 +195,17 @@ class VideoEditorWindow(QWidget):
                 end_time,
                 self.cache_handler.get_current_path_to_save()
             )
-        except FileNotFoundError:
-            raise_no_file_error()
-        except IOError:
+        except RuntimeError:
             raise_wrong_time_error()
         else:
             self.have_unsaved_changes = True
             self._play_resulting_video()
 
     def set_speed(self):
+        if self.cache_handler.current_index == 0:
+            raise_no_file_error()
+            return
+
         speed = run_set_speed_dialog_window()
 
         if speed is None:
@@ -205,8 +219,6 @@ class VideoEditorWindow(QWidget):
                 speed_float,
                 self.cache_handler.get_current_path_to_save()
             )
-        except FileNotFoundError:
-            raise_no_file_error()
         except ZeroDivisionError:
             raise_wrong_speed_error()
         else:

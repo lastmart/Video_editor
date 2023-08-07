@@ -9,10 +9,10 @@ class Parser:
             description="Video editor parser")
         self.parser.add_argument(
             "-v", dest="videos", type=str, help="Paths to the video(-s)",
-            nargs="+", required=True
+            nargs="+", required=False
         )
         self.parser.add_argument(
-            "-o", dest="path_to_save", type=str, required=True,
+            "-o", dest="path_to_save", type=str, required=False,
             help="Path to save the result video"
         )
         self._create_subcommand_parsers()
@@ -28,10 +28,8 @@ class Parser:
                                                   help="Set video speed"
                                                   )
         self._add_arguments_for_clip_speed_parser(clip_speed_parser)
-        gui_parser = subparsers.add_parser("gui",
-                                           help="Set video speed"
-                                           )
-        gui_parser.set_defaults(func=run_gui)
+        gui_parser = subparsers.add_parser("gui", help="Show GUI")
+        gui_parser.set_defaults(func=lambda x: run_gui())
 
     def parse_args(self, args=None, namespace=None):
         return self.parser.parse_args(args, namespace)

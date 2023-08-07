@@ -3,6 +3,7 @@ from os import getcwd
 from pathlib import Path
 from .utils import OperationType
 from video_editor import copy_video
+from .message import raise_cache_error, raise_save_error
 
 
 def _get_base_path_to_save() -> Path:
@@ -48,13 +49,20 @@ class CacheHandler:
             self.get_current_path_to_look(),
             self.get_current_path_to_save()
         )
-        os.rename(
-            self.get_current_path_to_look(), output_path
-        )
-        self.update_current_index(OperationType.Decrease)
+        try:
+            os.rename(
+                self.get_current_path_to_look(), output_path
+            )
+        except (
+            FileNotFoundError, PermissionError,
+            OSError, FileExistsError, IOError
+        ):
+            raise_save_error(output_path)
+        else:
+            self.update_current_index(OperationType.Decrease)
 
     def undo(self) -> None:
-        if self.current_index == 1:
+        if self.current_index == 1 or self.current_index == 0:
             raise FileNotFoundError
 
         self._remove_video(self.current_index)
@@ -82,7 +90,10 @@ class CacheHandler:
 
     def clear_cache(self) -> None:
         for index in range(1, self.current_index + 1):
-            self._remove_video(index)
+            try:
+                self._remove_video(index)
+            except IOError as e:
+                raise_cache_error(e.__str__())
 
         self.current_index = 0
 
@@ -95,4 +106,4 @@ class CacheHandler:
         if os.path.exists(current_path_to_remove):
             os.remove(current_path_to_remove)
         else:
-            raise FileNotFoundError(current_path_to_remove)
+            raise IOError(current_path_to_remove)

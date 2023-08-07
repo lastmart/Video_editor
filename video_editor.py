@@ -5,29 +5,38 @@ import sys
 from operator import floordiv
 
 
-def merge_and_save_videos(videos_paths: list[str], path_to_save: str,
-                          width: int = None, height: int = None,
-                          fps: int = None) -> None:
+def merge_and_save_videos(
+    videos_paths: list[str], path_to_save: str,
+    width: int = None, height: int = None,
+    fps: int = None
+) -> None:
     """
     Merge video, and if one of the parameters is not specified: height, width or fps -
     this parameter is taken from the first video in the list
     """
     if len(videos_paths) < 2:
         raise ValueError(
-            f'You can merge only two or more videos, but you got {len(videos_paths)}')
+            f'You can merge only two or more videos, but you got {len(videos_paths)}'
+        )
     if width is None or height is None:
-        first_video_information = get_information_about_video(videos_paths[0],
-                                                              'video')
+        first_video_information = get_information_about_video(
+            videos_paths[0],
+            'video'
+        )
         width = first_video_information['width']
         height = first_video_information['height']
         fps = first_video_information["avg_frame_rate"]
         fps = floordiv(*map(int, fps.split('/')))
-    save_video(merge_videos(open_videos(videos_paths), width, height, fps),
-               path_to_save)
+    save_video(
+        merge_videos(open_videos(videos_paths), width, height, fps),
+        path_to_save
+    )
 
 
-def merge_videos(videos: list[ffmpeg.Stream], width: int,
-                 height: int, fps: int) -> ffmpeg.nodes.Node:
+def merge_videos(
+    videos: list[ffmpeg.Stream], width: int,
+    height: int, fps: int
+) -> ffmpeg.nodes.Node:
     concat_params = []
     for video in videos:
         scaled_video = (ffmpeg
@@ -38,19 +47,26 @@ def merge_videos(videos: list[ffmpeg.Stream], width: int,
     return ffmpeg.concat(*concat_params, a=1).node
 
 
-def trim_and_save_video(video_path: str,
-                        start_time: Union[tuple, str],
-                        end_time: Union[tuple, str],
-                        path_to_save: str) -> None:
+def trim_and_save_video(
+    video_path: str,
+    start_time: Union[tuple, str],
+    end_time: Union[tuple, str],
+    path_to_save: str
+) -> None:
+    video_information = get_information_about_video(video_path, 'video')
     stream = ffmpeg.input(video_path)
     start_time = _convert_data_to_seconds(start_time)
     end_time = _convert_data_to_seconds(end_time)
+    if start_time > end_time or start_time < 0 or end_time > float(video_information['duration']):
+        raise RuntimeError('You specified the wrong cropping borders')
     save_video(trim_video(stream, start_time, end_time), path_to_save)
 
 
-def trim_video(input_video: ffmpeg.Stream,
-               start_time: int,
-               end_time: int) -> ffmpeg.Stream:
+def trim_video(
+    input_video: ffmpeg.Stream,
+    start_time: int,
+    end_time: int
+) -> ffmpeg.Stream:
     pts = 'PTS-STARTPTS'
     video = (input_video.video
              .filter('trim', start=start_time, end=end_time)
@@ -63,7 +79,10 @@ def trim_video(input_video: ffmpeg.Stream,
 
 def _convert_data_to_seconds(time: Union[tuple, list, str]):
     if isinstance(time, str):
-        time = list(map(int, time.split(':')))
+        try:
+            time = list(map(int, time.split(':')))
+        except ValueError:
+            raise
     if isinstance(time, Union[tuple, list]):
         time_in_seconds = 0
         for i in range(len(time)):
@@ -74,11 +93,15 @@ def _convert_data_to_seconds(time: Union[tuple, list, str]):
     return time
 
 
-def set_video_speed_and_save(video_path: str,
-                             speed: Union[int, float, str],
-                             path_to_save: str) -> None:
-    speed = int(speed) if isinstance(speed, str) else speed
+def set_video_speed_and_save(
+    video_path: str,
+    speed: Union[int, float, str],
+    path_to_save: str
+) -> None:
+    speed = float(speed) if isinstance(speed, str) else speed
     speed = round(speed, 1)
+    if speed < 1e-5:
+        raise ZeroDivisionError
     stream = ffmpeg.input(video_path)
     save_video(set_video_speed(stream, speed), path_to_save)
 
@@ -91,13 +114,16 @@ def set_video_speed(input_video: ffmpeg.Stream, speed: int) -> ffmpeg.Stream:
     return ffmpeg.concat(video, audio, v=1, a=1).node
 
 
-def save_video(video: Union[ffmpeg.Stream, ffmpeg.nodes.Node],
-               output_path: str, overwrite: bool = False) -> None:
-    if not is_paths_correct(output_path):
-        raise ValueError
+def save_video(
+    video: Union[ffmpeg.Stream, ffmpeg.nodes.Node],
+    output_path: str, overwrite: bool = False
+) -> None:
+    check_paths_correctness(output_path)
     if isinstance(video, ffmpeg.Stream):
-        out = ffmpeg.output(video.video, video.audio, output_path,
-                            format='mp4')
+        out = ffmpeg.output(
+            video.video, video.audio, output_path,
+            format='mp4'
+        )
     elif isinstance(video, ffmpeg.nodes.Node):
         out = ffmpeg.output(video[0], video[1], output_path, format='mp4')
     else:
@@ -109,8 +135,7 @@ def save_video(video: Union[ffmpeg.Stream, ffmpeg.nodes.Node],
 
 def open_videos(input_paths: Union[list, str]) -> Union[
     list[ffmpeg.Stream], ffmpeg.Stream]:
-    if not is_paths_correct(input_paths):
-        raise ValueError
+    check_paths_correctness(input_paths)
     if isinstance(input_paths, str):
         return ffmpeg.input(input_paths)
     elif isinstance(input_paths, list):
@@ -118,15 +143,16 @@ def open_videos(input_paths: Union[list, str]) -> Union[
     raise TypeError
 
 
-def is_paths_correct(paths: Union[str, list[str]]) -> bool:
+def check_paths_correctness(paths: Union[str, list[str]]) -> None:
     if isinstance(paths, str):
         paths = [paths]
     for path in paths:
         try:
             Path(path).resolve()
-        except (FileNotFoundError, RuntimeError):
-            return False
-    return True
+        except (FileNotFoundError, RuntimeError) as e:
+            raise IOError(path) from e
+        if path.rsplit('.', 1)[-1] != 'mp4':
+            raise IOError(f"{path} hasn't mp4 format")
 
 
 def copy_video(input_path: str, output_path: str):
@@ -140,15 +166,19 @@ def get_information_about_video(file: str, stream_name: str) -> dict:
     except ffmpeg.Error as e:
         print(e.stderr.decode(), file=sys.stderr)
         raise e
-    video_stream = next((stream for stream in probe['streams'] if
-                         stream['codec_type'] == stream_name), None)
+    video_stream = next(
+        (stream for stream in probe['streams'] if
+         stream['codec_type'] == stream_name), None
+    )
     if video_stream is None:
         raise FileNotFoundError(f'No video stream found in\n {file}')
     return video_stream
 
 
-def generate_thumbnail(in_filename: str, out_filename: str, time: int,
-                       width: int) -> None:
+def generate_thumbnail(
+    in_filename: str, out_filename: str, time: int,
+    width: int
+) -> None:
     """
     Allows to get a frame from a video
     :param in_filename: the absolute path to the video where you want the frame

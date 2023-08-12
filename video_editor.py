@@ -152,7 +152,7 @@ def check_paths_correctness(paths: Union[str, list[str]]) -> None:
         except (FileNotFoundError, RuntimeError) as e:
             raise IOError(path) from e
         if path.rsplit('.', 1)[-1] != 'mp4':
-            raise IOError(f"{path} hasn't mp4 format")
+            raise ValueError(f"{path} hasn't mp4 format")
 
 
 def copy_video(input_path: str, output_path: str):

@@ -1,6 +1,6 @@
 from video_editor import \
     merge_and_save_videos, trim_and_save_video, \
-    set_video_speed_and_save, check_paths_correctness, copy_video
+    set_video_speed_and_save, copy_video
 from .supporting_windows import \
     run_trim_dialog_window, run_set_speed_dialog_window, \
     run_close_event_dialog_window, run_undo_dialog_window,\
@@ -12,8 +12,14 @@ from PyQt6.QtWidgets import \
 from PyQt6.QtMultimediaWidgets import QVideoWidget
 from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput
 from .cache_handler import CacheHandler
+from .utils import OperationSystem, OperationType, process_paths
 from .message import *
 import sys
+
+
+OPERATION_SYSTEM = OperationSystem.WINDOWS \
+            if str(CacheHandler.get_base_path_to_save()).count("\\") != 0 \
+            else OperationSystem.UNIX
 
 
 class VideoEditorWindow(QWidget):
@@ -114,19 +120,21 @@ class VideoEditorWindow(QWidget):
                 self._play_resulting_video()
 
     def open_file(self):
-        user_file_path, _ = QFileDialog.getOpenFileName(self)
+        user_file_path = self.get_open_file_name()
 
         if user_file_path == "":
             return
 
         try:
-            check_paths_correctness(user_file_path)
             copy_video(
                 user_file_path, self.cache_handler.get_current_path_to_save()
             )
         except IOError:
-            raise_wrong_path_error(user_file_path)
+            raise_open_error(user_file_path)
+        except ValueError:
+            raise_wrong_extension_error(user_file_path)
         else:
+            self.cache_handler.update_current_index(OperationType.INCREASE)
             self.have_unsaved_changes = False
             self._play_resulting_video()
 
@@ -135,16 +143,15 @@ class VideoEditorWindow(QWidget):
             raise_no_file_error()
             return
 
-        user_file_path, _ = QFileDialog.getSaveFileName(self)
+        user_file_path = self.get_save_file_name()
 
         if user_file_path == "":
             return
 
         try:
-            check_paths_correctness(user_file_path)
             self.cache_handler.save_from_cache(user_file_path)
         except IOError:
-            raise_wrong_path_error(user_file_path)
+            raise_save_error(user_file_path)
         else:
             self.have_unsaved_changes = False
             get_success_message(user_file_path)
@@ -154,7 +161,7 @@ class VideoEditorWindow(QWidget):
             raise_no_file_error()
             return
 
-        user_file_paths, _ = QFileDialog.getOpenFileNames(self)
+        user_file_paths = self.get_open_file_names()
 
         if len(user_file_paths) == 0:
             return
@@ -167,8 +174,9 @@ class VideoEditorWindow(QWidget):
                 file_paths, self.cache_handler.get_current_path_to_save()
             )
         except IOError as e:
-            raise_wrong_path_error(e.__str__())
+            raise_open_error(e.__str__())
         else:
+            self.cache_handler.update_current_index(OperationType.INCREASE)
             self.have_unsaved_changes = True
             self._play_resulting_video()
 
@@ -198,6 +206,7 @@ class VideoEditorWindow(QWidget):
         except RuntimeError:
             raise_wrong_time_error()
         else:
+            self.cache_handler.update_current_index(OperationType.INCREASE)
             self.have_unsaved_changes = True
             self._play_resulting_video()
 
@@ -222,6 +231,7 @@ class VideoEditorWindow(QWidget):
         except ZeroDivisionError:
             raise_wrong_speed_error()
         else:
+            self.cache_handler.update_current_index(OperationType.INCREASE)
             self.have_unsaved_changes = True
             self._play_resulting_video()
 
@@ -276,6 +286,23 @@ class VideoEditorWindow(QWidget):
             event.accept()
         else:
             event.ignore()
+
+    @process_paths(OPERATION_SYSTEM)
+    def get_open_file_name(self):
+        user_file_path, _ = QFileDialog.getOpenFileName(self, filter="(*.mp4)")
+        return user_file_path
+
+    @process_paths(OPERATION_SYSTEM)
+    def get_open_file_names(self):
+        user_file_path, _ = QFileDialog.getOpenFileNames(
+            self, filter="(*.mp4)"
+        )
+        return user_file_path
+
+    @process_paths(OPERATION_SYSTEM)
+    def get_save_file_name(self):
+        user_file_path, _ = QFileDialog.getSaveFileName(self, filter="(*.mp4)")
+        return user_file_path
 
 
 def run_gui():

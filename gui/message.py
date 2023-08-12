@@ -2,8 +2,16 @@ from PyQt6.QtWidgets import QMessageBox
 from .utils import MessageType
 
 
-def raise_wrong_path_error(file_path):
-    text = f"No such file:'{file_path}'"
+def raise_wrong_extension_error(file_path):
+    text = f"""Wrong file extension. 
+    This program work only with '.mp4'.
+    Your path is :'{file_path}'
+    """
+    get_base_message(text, MessageType.ERROR)
+
+
+def raise_open_error(file_path):
+    text = f"Can't open this path:'{file_path}'"
     get_base_message(text, MessageType.ERROR)
 
 

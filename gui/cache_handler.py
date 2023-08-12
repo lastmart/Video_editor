@@ -3,53 +3,44 @@ from os import getcwd
 from pathlib import Path
 from .utils import OperationType
 from video_editor import copy_video
-from .message import raise_cache_error, raise_save_error
-
-
-def _get_base_path_to_save() -> Path:
-    base_path_to_save = str(
-        Path(str(getcwd())) / 'gui' / 'cache'
-    )
-
-    '''This happens when the operating system is Windows'''
-    if base_path_to_save.count("gui") == 2:
-        base_path_to_save = str(
-            Path(str(getcwd())) / 'cache'
-        )
-
-    return Path(base_path_to_save)
+from .message import raise_cache_error
 
 
 class CacheHandler:
     def __init__(self):
         self.current_index = 0
-        self.BASE_PATH_TO_SAVE = _get_base_path_to_save()
+        self.BASE_PATH_TO_SAVE = CacheHandler.get_base_path_to_save()
 
     def update_current_index(self, operation: OperationType) -> None:
-        if operation == OperationType.Increase:
+        if operation == OperationType.INCREASE:
             self.current_index += 1
-        elif operation == OperationType.Decrease:
+        elif operation == OperationType.DECREASE:
             self.current_index -= 1
 
-    def get_current_path_to_look(self) -> str:
+    def get_current_path_to_look(self, additive=0) -> str:
+        """
+        The 'additive' is an argument that is 1 if the
+        method is called from a 'get_current_path_to_save'
+        """
         current_path = str(
             self.BASE_PATH_TO_SAVE /
-            f'temp{self.current_index}.mp4'
+            f'temp{self.current_index + additive}.mp4'
         )
 
         return current_path
 
     def get_current_path_to_save(self) -> str:
-        self.update_current_index(OperationType.Increase)
-
-        return self.get_current_path_to_look()
+        return self.get_current_path_to_look(additive=1)
 
     def save_from_cache(self, output_path: str) -> None:
-        copy_video(
-            self.get_current_path_to_look(),
-            self.get_current_path_to_save()
-        )
         try:
+            copy_video(
+                self.get_current_path_to_look(),
+                self.get_current_path_to_save()
+            )
+
+            self.update_current_index(OperationType.INCREASE)
+
             os.rename(
                 self.get_current_path_to_look(), output_path
             )
@@ -57,16 +48,16 @@ class CacheHandler:
             FileNotFoundError, PermissionError,
             OSError, FileExistsError, IOError
         ):
-            raise_save_error(output_path)
+            raise IOError
         else:
-            self.update_current_index(OperationType.Decrease)
+            self.update_current_index(OperationType.DECREASE)
 
     def undo(self) -> None:
         if self.current_index == 1 or self.current_index == 0:
             raise FileNotFoundError
 
         self._remove_video(self.current_index)
-        self.update_current_index(OperationType.Decrease)
+        self.update_current_index(OperationType.DECREASE)
 
     def prepare_cache_folder(self) -> None:
         """If the program was terminated incorrectly, the
@@ -107,3 +98,17 @@ class CacheHandler:
             os.remove(current_path_to_remove)
         else:
             raise IOError(current_path_to_remove)
+
+    @staticmethod
+    def get_base_path_to_save() -> Path:
+        base_path_to_save = str(
+            Path(str(getcwd())) / 'gui' / 'cache'
+        )
+
+        '''This happens when the operating system is Windows'''
+        if base_path_to_save.count("gui") == 2:
+            base_path_to_save = str(
+                Path(str(getcwd())) / 'cache'
+            )
+
+        return Path(base_path_to_save)

@@ -1,4 +1,4 @@
-from video_editor import \
+from VideoEditor.video_editor import \
     merge_and_save_videos, trim_and_save_video, \
     set_video_speed_and_save, copy_video
 from .supporting_windows import \

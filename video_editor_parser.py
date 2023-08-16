@@ -1,4 +1,4 @@
-from video_editor import *
+from VideoEditor.video_editor import *
 from gui.application import run_gui
 import argparse
 

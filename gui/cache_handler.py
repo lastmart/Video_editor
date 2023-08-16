@@ -2,7 +2,7 @@ import os
 from os import getcwd
 from pathlib import Path
 from .utils import OperationType
-from video_editor import copy_video
+from VideoEditor.video_editor import copy_video
 from .message import raise_cache_error
 
 

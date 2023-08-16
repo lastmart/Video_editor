@@ -11,6 +11,7 @@ moviepy = "^1.0.3"
 pyqt6 = "^6.5.2"
 ffmpeg = "^1.4"
 ffmpeg-python = "^0.2.0"
+gevent = "^23.7.0"
 
 
 [build-system]

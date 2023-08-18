@@ -1,12 +1,13 @@
-from .utils import \
-    check_paths_correctness, convert_date_to_seconds, convert_ratio_to_int
-from .progress_bar import show_progress
+from utils import \
+    check_paths_correctness, convert_date_to_seconds, convert_ratio_to_int, \
+    scale_frame_in_bounds, get_video_duration, get_information_about_stream
+from progress_bar import show_progress
 from typing import Union
 import ffmpeg
 import sys
 
 
-def merge_and_save_videos(
+def merge_videos_and_save(
         videos_paths: list[str],
         path_to_save: str,
         width: int = None,
@@ -33,15 +34,15 @@ def merge_and_save_videos(
             f'You can merge only two or more videos, but you got {len(videos_paths)}'
         )
 
-    first_video_information = get_information_about_video_stream(
+    first_video_information = get_information_about_stream(
         videos_paths[0],
         'video')
     width = first_video_information['width'] if width is None else width
     height = first_video_information['height'] if height is None else height
     fps = convert_ratio_to_int(
         first_video_information['avg_frame_rate']) if fps is None else fps
-    sar = first_video_information[
-        'sample_aspect_ratio'] if sar is None else sar
+    sar = first_video_information.get('sample_aspect_ratio',
+                                      '1/1') if sar is None else sar
     merged_video = merge_videos(open_videos(videos_paths), width, height, fps,
                                 sar)
     result_video_duration = sum(
@@ -82,7 +83,7 @@ def trim_and_save_video(
     :param is_overwrite: overwrites the video even if there is already a video in the save path
     :return: None
     """
-    video_information = get_information_about_video_stream(video_path, 'video')
+    video_information = get_information_about_stream(video_path, 'video')
     stream = ffmpeg.input(video_path)
     start_time = convert_date_to_seconds(start_time)
     end_time = convert_date_to_seconds(end_time)
@@ -130,7 +131,8 @@ def set_video_speed_and_save(
     print(get_video_duration(video_path))
     print((1 / speed))
     print(get_video_duration(video_path) * (1 / speed))
-    result_video_duration = round(get_video_duration(video_path) * (1 / speed), 2)
+    result_video_duration = round(get_video_duration(video_path) * (1 / speed),
+                                  2)
     save_video(changed_speed_video, path_to_save, is_overwrite,
                result_video_duration)
 
@@ -143,77 +145,32 @@ def set_video_speed(input_video: ffmpeg.Stream, speed: float) -> ffmpeg.Stream:
     return ffmpeg.concat(video, audio, v=1, a=1).node
 
 
-def save_video(
-        video: Union[ffmpeg.Stream, ffmpeg.nodes.Node],
-        output_path: str,
-        is_overwrite: bool = False,
-        duration: float = None
+def overlay_video_on_another_and_save(
+        main_video_path: str,
+        overlay_path: str,
+        path_to_save: str,
+        x_shift: int = 0,
+        y_shift: int = 0,
+        is_overwrite: bool = False
 ) -> None:
-    if not output_path.endswith('.mp4'):
-        output_path += '.mp4'
-    check_paths_correctness(output_path)
-    if isinstance(video, ffmpeg.Stream):
-        out = ffmpeg.output(video.video, video.audio, output_path)
-    elif isinstance(video, ffmpeg.nodes.Node):
-        out = ffmpeg.output(video[0], video[1], output_path)
-    else:
-        raise ValueError(f'{type(video)} can not save')
-    if duration is not None:
-        with show_progress(duration) as socket_filename:
-            (out
-             .global_args('-progress', 'unix://{}'.format(socket_filename))
-             .run(overwrite_output=is_overwrite, capture_stdout=True,
-                  capture_stderr=True)
-             )
-    else:
-        out.run(overwrite_output=is_overwrite)
-
-
-def open_videos(input_paths: Union[list[str], str]) -> \
-        Union[list[ffmpeg.Stream], ffmpeg.Stream]:
-    check_paths_correctness(input_paths)
-    if isinstance(input_paths, str):
-        return ffmpeg.input(input_paths)
-    elif isinstance(input_paths, list):
-        return [ffmpeg.input(input_path) for input_path in input_paths]
-    raise TypeError
+    overlay_height, overlay_width = scale_frame_in_bounds(main_video_path,
+                                                          overlay_path,
+                                                          x_shift, y_shift)
+    main_video = open_videos(main_video_path)
+    overlay_video = open_videos(overlay_path) \
+        .filter('scale', overlay_width, overlay_height)
+    overlay_result = (
+        main_video
+        .overlay(overlay_video, x=x_shift, y=y_shift)
+        .concat(main_video.audio, a=1).node
+    )
+    save_video(overlay_result, path_to_save, is_overwrite=is_overwrite)
 
 
 def copy_video(input_path: str, output_path: str,
                is_overwrite: bool = True) -> None:
     video = open_videos(input_path)
     save_video(video, output_path, is_overwrite)
-
-
-def get_video_duration(file: Union[str, ffmpeg.nodes.Node]) -> float:
-    if isinstance(file, ffmpeg.nodes.Node):
-        file = file.kwargs['filename']
-    try:
-        probe = ffmpeg.probe(file)
-    except TypeError as e:
-        raise TypeError(f'You can not get duration of {type(file)}') from e
-    except ffmpeg.Error as e:
-        print(e.stderr.decode(), file=sys.stderr)
-        raise e
-    return float(probe['format']['duration'])
-
-
-def get_information_about_video_stream(file: Union[str, ffmpeg.nodes.Node],
-                                       stream_name: str) -> dict:
-    if isinstance(file, ffmpeg.nodes.Node):
-        file = file.kwargs['filename']
-    try:
-        probe = ffmpeg.probe(file)
-    except ffmpeg.Error as e:
-        print(e.stderr.decode(), file=sys.stderr)
-        raise e
-    video_stream = next(
-        (stream for stream in probe['streams'] if
-         stream['codec_type'] == stream_name), None
-    )
-    if video_stream is None:
-        raise FileNotFoundError(f'No video stream found in\n {file}')
-    return video_stream
 
 
 def generate_thumbnail(
@@ -243,19 +200,110 @@ def generate_thumbnail(
         raise e
 
 
-if __name__ == '__main__':
+def save_video(
+        video: Union[ffmpeg.Stream, ffmpeg.nodes.Node],
+        output_path: str,
+        is_overwrite: bool = False,
+        duration: float = None
+) -> None:
+    if not output_path.endswith('.mp4'):
+        output_path += '.mp4'
+    check_paths_correctness(output_path)
+    if isinstance(video, ffmpeg.Stream):
+        out = ffmpeg.output(video, output_path)
+    elif isinstance(video, ffmpeg.nodes.Node):
+        out = ffmpeg.output(video[0], video[1], output_path)
+    else:
+        raise ValueError(f'{type(video)} can not save')
+    if duration is not None:
+        with show_progress(duration) as socket_filename:
+            (out
+             .global_args('-progress', 'unix://{}'.format(socket_filename))
+             .run(overwrite_output=is_overwrite, capture_stdout=True,
+                  capture_stderr=True)
+             )
+    else:
+        out.run(overwrite_output=is_overwrite)
+
+
+def open_videos(input_paths: Union[list[str], str]) -> \
+        Union[list[ffmpeg.Stream], ffmpeg.Stream]:
+    check_paths_correctness(input_paths)
+    if isinstance(input_paths, str):
+        return ffmpeg.input(input_paths)
+    elif isinstance(input_paths, list):
+        return [ffmpeg.input(input_path) for input_path in input_paths]
+    raise TypeError
+
+
+# if __name__ == '__main__':
     # set_video_speed_and_save(
     #     r"/mnt/c/Users/egore/OneDrive/Документы/python/python_task/ASCII_ART/sample.mp4",
     #     0.5, r'/mnt/c/Users/egore/OneDrive/Документы/output.mp4',
     #     is_overwrite=True)
 
-    merge_and_save_videos([
-        r"/mnt/c/Users/egore/OneDrive/Документы/shrekSize.mp4",
-        r"/mnt/c/Users/egore/OneDrive/Документы/python/python_task/Video_editor/resources/shrek_dancing.mp4",
-        r"/mnt/c/Users/egore/OneDrive/Документы/python/python_task/Video_editor/resources/fugu_eat_carrot.mp4",
-        r"/mnt/c/Users/egore/OneDrive/Документы/sampleCorrectSize.mp4",
-        r"/mnt/c/Users/egore/OneDrive/Документы/shrekSizeFps.mp4",
-        r"/mnt/c/Users/egore/OneDrive/Документы/python/python_task/Video_editor/resources/gachi_girls.mp4",
-    ],
-        r"/mnt/c/Users/egore/OneDrive/Документы/121update.mp4", is_overwrite=True
-    )
+    # merge_and_save_videos([
+    #     r"/mnt/c/Users/egore/OneDrive/Документы/shrekSize.mp4",
+    #     r"/mnt/c/Users/egore/OneDrive/Документы/python/python_task/Video_editor/resources/shrek_dancing.mp4",
+    #     r"/mnt/c/Users/egore/OneDrive/Документы/python/python_task/Video_editor/resources/fugu_eat_carrot.mp4",
+    #     r"/mnt/c/Users/egore/OneDrive/Документы/sampleCorrectSize.mp4",
+    #     r"/mnt/c/Users/egore/OneDrive/Документы/shrekSizeFps.mp4",
+    #     r"/mnt/c/Users/egore/OneDrive/Документы/python/python_task/Video_editor/resources/gachi_girls.mp4",
+    # ],
+    #     r"/mnt/c/Users/egore/OneDrive/Документы/121update.mp4", is_overwrite=True
+    # )
+
+    # cut every frame of the video
+    # in1 = open_videos(r"/mnt/c/Users/egore/OneDrive/Документы/python/python_task/ASCII_ART/sample.mp4")
+    # video = ffmpeg.crop(in1, 100, 200, 240, 180)
+    # res = ffmpeg.concat(video, in1.audio, a=1).node
+    # save_video(res, r"/mnt/c/Users/egore/OneDrive/Документы/121update.mp4", is_overwrite=True)
+
+    # in1: ffmpeg.Stream = open_videos(r"/mnt/c/Users/egore/OneDrive/Документы/python/python_task/ASCII_ART/sample.mp4")
+    # in2: ffmpeg.Stream = open_videos(r"/mnt/c/Users/egore/OneDrive/Изображения/Saved Pictures/1234567.jpg")
+    # a = ffmpeg.overlay(in1, in2)
+    # save_video(a, r"/mnt/c/Users/egore/OneDrive/Документы/13.mp4", is_overwrite=True)
+
+    # a = ffmpeg.probe(
+    #     r"/mnt/c/Users/egore/OneDrive/Изображения/Saved Pictures/blade-runner-look-lonely.jpg")
+    # in_file = ffmpeg.input(
+    #     r"/mnt/c/Users/egore/OneDrive/Документы/python/python_task/Video_editor/resources/fugu_eat_carrot.mp4")
+    # overlay_file = ffmpeg.input(
+    #     r"/mnt/c/Users/egore/OneDrive/Документы/python/python_task/ASCII_ART/sample.mp4"
+    #     # r"/mnt/c/Users/egore/OneDrive/Изображения/Saved Pictures/blade-runner-look-lonely.jpg") \
+    #
+    # ).filter('scale', 480, -1)
+    # res = (
+    #     in_file
+    #     .overlay(overlay_file, x=50, y=50)
+    # )
+    # res = ffmpeg.concat(res, in_file.audio, a=1).node
+    # save_video(res, r"/mnt/c/Users/egore/OneDrive/Документы/out.mp4",
+    #            is_overwrite=True)
+
+    # overlay_video_on_another_and_save(
+    #     r"/mnt/c/Users/egore/OneDrive/Документы/python/python_task/ASCII_ART/sample.mp4",
+    #     r"/mnt/c/Users/egore/OneDrive/Изображения/Saved Pictures/blade-runner-look-lonely.jpg",
+    #     r"/mnt/c/Users/egore/OneDrive/Документы/out.mp4",
+    #     is_overwrite=True,
+    #     x_shift=300,
+    #     y_shift=200
+    #     )
+
+    # in_file = ffmpeg.input(
+    #     r"/mnt/c/Users/egore/OneDrive/Документы/python/python_task/ASCII_ART/sample.mp4")
+    # overlay_file = ffmpeg.input(
+    #     r"/mnt/c/Users/egore/OneDrive/Документы/overlay.png")
+    # (
+    #     in_file
+    #     .overlay(overlay_file)
+    #     .output(r"/mnt/c/Users/egore/OneDrive/Документы/out.mp4")
+    #     .run()
+    # )
+
+    # merge_and_save_videos([
+    #     # r"/mnt/c/Users/egore/OneDrive/Документы/python/python_task/Video_editor/resources/shower.mp4",
+    #     # r"/mnt/c/Users/egore/OneDrive/Документы/python/python_task/Video_editor/resources/shower.mp4",
+    #     r"/mnt/c/Users/egore/OneDrive/Документы/python/python_task/Video_editor/resources/gachi_girls.mp4",
+    #     r"/mnt/c/Users/egore/OneDrive/Документы/python/python_task/Video_editor/resources/gachi_girls.mp4"],
+    #     r"/mnt/c/Users/egore/OneDrive/Документы/zads", is_overwrite=True)

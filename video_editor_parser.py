@@ -37,7 +37,7 @@ class Parser:
     @staticmethod
     def _add_arguments_for_merge_parser(parser):
         parser.set_defaults(
-            func=lambda x: merge_and_save_videos(x.videos, x.path_to_save))
+            func=lambda x: merge_videos_and_save(x.videos, x.path_to_save))
 
     @staticmethod
     def _add_arguments_for_trim_parser(parser):

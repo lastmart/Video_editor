@@ -1,5 +1,5 @@
 from VideoEditor.video_editor import \
-    merge_and_save_videos, trim_and_save_video, \
+    merge_videos_and_save, trim_and_save_video, \
     set_video_speed_and_save, copy_video
 from .supporting_windows import \
     run_trim_dialog_window, run_set_speed_dialog_window, \
@@ -170,7 +170,7 @@ class VideoEditorWindow(QWidget):
         file_paths.extend(user_file_paths)
 
         try:
-            merge_and_save_videos(
+            merge_videos_and_save(
                 file_paths, self.cache_handler.get_current_path_to_save()
             )
         except IOError as e:

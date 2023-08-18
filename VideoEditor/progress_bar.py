@@ -7,7 +7,7 @@ import os
 import shutil
 import socket
 import tempfile
-from .utils import convert_date_to_seconds
+from utils import convert_date_to_seconds
 
 gevent.monkey.patch_all(thread=False)
 
@@ -78,7 +78,9 @@ def _watch_progress(handler):
 def show_progress(total_duration):
     """Create a unix-domain socket to watch progress and render tqdm
     progress bar."""
-    with tqdm(total=round(total_duration, 2)) as bar:
+    # file = r'/mnt/c/Users/egore/OneDrive/Документы/temp1.txt'
+    # file = open(file, mode='w')
+    with tqdm(total=round(total_duration, 2)) as bar:  # file=file
         def handler(key, value):
             if key == 'out_time':
                 time = convert_date_to_seconds(value)
@@ -88,7 +90,7 @@ def show_progress(total_duration):
 
         with _watch_progress(handler) as socket_filename:
             yield socket_filename
-
+    # file.close()
 
 # if __name__ == '__main__':
 #     total_duration = float(

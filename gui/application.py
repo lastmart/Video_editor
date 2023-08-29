@@ -1,8 +1,8 @@
 import sys
 from PyQt6.QtCore import Qt, QUrl
 from PyQt6.QtWidgets import \
-    QApplication, QWidget, QVBoxLayout, QPushButton, QFileDialog, \
-    QSlider, QStyle, QHBoxLayout, QMenu, QMenuBar
+    QApplication, QWidget, QVBoxLayout, QPushButton, QSlider, \
+    QStyle, QHBoxLayout, QMenu, QMenuBar, QSpacerItem, QSizePolicy
 from PyQt6.QtMultimediaWidgets import QVideoWidget
 from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput
 from VideoEditor.video_editor import \
@@ -12,14 +12,11 @@ from .supporting_windows import \
     run_trim_dialog_window, run_set_speed_dialog_window, \
     run_close_event_dialog_window, run_undo_dialog_window
 from .cache_handler import CacheHandler
-from .utils import OperationType, OperationSystem, process_paths
+from .utils import \
+    OperationType, OperationSystem, OS_TYPE, get_open_file_name, \
+    get_open_file_names, get_save_file_name
 from .constructor import get_volume_icon, get_text_label
 from .message import *
-
-
-OPERATION_SYSTEM = OperationSystem.WINDOWS \
-            if str(CacheHandler.get_base_path_to_save()).count("\\") != 0 \
-            else OperationSystem.UNIX
 
 
 class VideoEditorWindow(QWidget):
@@ -89,6 +86,11 @@ class VideoEditorWindow(QWidget):
         )
 
     def _set_up_layouts(self):
+        y_offset = 20 if OS_TYPE != OperationSystem.MACOS else 0
+        spacer = QSpacerItem(
+            0, y_offset, QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed
+        )
+
         upper_control_layout = QHBoxLayout()
         upper_control_layout.addWidget(self.play_button)
         upper_control_layout.addWidget(get_volume_icon(self))
@@ -99,6 +101,7 @@ class VideoEditorWindow(QWidget):
         lower_control_layout.addWidget(self.video_slider)
 
         main_layout = QVBoxLayout()
+        main_layout.addItem(spacer)
         main_layout.addWidget(self.video_widget)
         main_layout.addLayout(upper_control_layout)
         main_layout.addLayout(lower_control_layout)
@@ -295,26 +298,6 @@ class VideoEditorWindow(QWidget):
             event.accept()
         else:
             event.ignore()
-
-
-@process_paths(OPERATION_SYSTEM)
-def get_open_file_name(obj):
-    user_file_path, _ = QFileDialog.getOpenFileName(obj, filter="(*.mp4)")
-    return user_file_path
-
-
-@process_paths(OPERATION_SYSTEM)
-def get_open_file_names(obj):
-    user_file_path, _ = QFileDialog.getOpenFileNames(
-        obj, filter="(*.mp4)"
-    )
-    return user_file_path
-
-
-@process_paths(OPERATION_SYSTEM)
-def get_save_file_name(obj):
-    user_file_path, _ = QFileDialog.getSaveFileName(obj, filter="(*.mp4)")
-    return user_file_path
 
 
 def run_gui():

@@ -1,7 +1,7 @@
-from utils import \
+from .utils import \
     check_paths_correctness, convert_date_to_seconds, convert_ratio_to_int, \
     scale_frame_in_bounds, get_video_duration, get_information_about_stream
-from progress_bar import show_progress
+from .progress_bar import show_progress
 from typing import Union
 import ffmpeg
 import sys

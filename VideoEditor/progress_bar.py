@@ -7,7 +7,7 @@ import os
 import shutil
 import socket
 import tempfile
-from utils import convert_date_to_seconds
+from .utils import convert_date_to_seconds
 
 gevent.monkey.patch_all(thread=False)
 

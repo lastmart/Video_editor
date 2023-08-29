@@ -13,6 +13,7 @@ from PyQt6.QtMultimediaWidgets import QVideoWidget
 from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput
 from .cache_handler import CacheHandler
 from .utils import OperationSystem, OperationType, process_paths
+from .constructor import get_volume_icon
 from .message import *
 import sys
 
@@ -40,7 +41,8 @@ class VideoEditorWindow(QWidget):
 
         self._set_up_play_button()
         self.prefix_text = _get_text_label(self, "00:00")
-        self._set_up_position_slider()
+        self._set_up_video_slider()
+        self._set_up_audio_slider()
         self._set_up_layouts()
         self._set_up_media_player()
         self._set_up_menu_bar()
@@ -72,20 +74,31 @@ class VideoEditorWindow(QWidget):
         self.play_button.setEnabled(False)
         self.play_button.clicked.connect(self._change_media_player_state)
 
-    def _set_up_position_slider(self):
-        self.position_slider = QSlider(Qt.Orientation.Horizontal)
-        self.position_slider.setRange(0, 0)
-        self.position_slider.sliderMoved.connect(self._set_position)
+    def _set_up_video_slider(self):
+        self.video_slider = QSlider(Qt.Orientation.Horizontal)
+        self.video_slider.setRange(0, 0)
+        self.video_slider.sliderMoved.connect(self._set_video_position)
+
+    def _set_up_audio_slider(self):
+        self.audio_slider = QSlider(Qt.Orientation.Horizontal)
+        self.audio_slider.setRange(0, 100)
+        self.audio_slider.setValue(50)
+        self.audio_slider.sliderMoved.connect(self._set_audio_position)
 
     def _set_up_layouts(self):
-        control_layout = QHBoxLayout()
-        control_layout.addWidget(self.play_button)
-        control_layout.addWidget(self.prefix_text)
-        control_layout.addWidget(self.position_slider)
+        upper_control_layout = QHBoxLayout()
+        upper_control_layout.addWidget(self.play_button)
+        upper_control_layout.addWidget(get_volume_icon(self))
+        upper_control_layout.addWidget(self.audio_slider)
+
+        lower_control_layout = QHBoxLayout()
+        lower_control_layout.addWidget(self.prefix_text)
+        lower_control_layout.addWidget(self.video_slider)
 
         main_layout = QVBoxLayout()
         main_layout.addWidget(self.video_widget)
-        main_layout.addLayout(control_layout)
+        main_layout.addLayout(upper_control_layout)
+        main_layout.addLayout(lower_control_layout)
 
         self.setLayout(main_layout)
 
@@ -257,14 +270,18 @@ class VideoEditorWindow(QWidget):
                 self.style().standardIcon(QStyle.StandardPixmap.SP_MediaPlay)
             )
 
-    def _set_position(self, position):
+    def _set_video_position(self, position):
         self.media_player.setPosition(position)
 
+    def _set_audio_position(self, position):
+        volume = position / 100
+        self.audio_output.setVolume(volume)
+
     def _change_slider_duration(self, duration):
-        self.position_slider.setRange(0, duration)
+        self.video_slider.setRange(0, duration)
 
     def _update_slider_position(self, position):
-        self.position_slider.setValue(position)
+        self.video_slider.setValue(position)
 
     def _update_prefix_text(self, position):
         minutes = int(position / 60000)

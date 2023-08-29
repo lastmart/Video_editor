@@ -1,8 +1,8 @@
 from PyQt6 import QtWidgets
 from PyQt6.QtWidgets import \
-    QDialog, QDialogButtonBox, QVBoxLayout, QHBoxLayout, QWidget
+    QDialog, QVBoxLayout, QHBoxLayout
 from PyQt6.QtCore import QTime
-from typing import Union
+from .constructor import get_text_label, get_choice_button
 
 
 class TrimDialogWindow(QDialog):
@@ -12,14 +12,14 @@ class TrimDialogWindow(QDialog):
         self.setWindowTitle("trim dialog")
         self.setMinimumWidth(250)
 
-        main_text = _get_text_label(
+        main_text = get_text_label(
             self, "Select the fragment that will remain:"
         )
-        start_text = _get_text_label(self, "start time")
-        end_text = _get_text_label(self, "end time")
+        start_text = get_text_label(self, "start time")
+        end_text = get_text_label(self, "end time")
 
         self._set_up_time_edit_widgets()
-        choice_button = _get_choice_button(self)
+        choice_button = get_choice_button(self)
 
         self._set_up_layouts(choice_button, end_text, main_text, start_text)
 
@@ -59,13 +59,13 @@ class SetSpeedDialogWindow(QDialog):
         self.setWindowTitle("set speed dialog")
         self.setMinimumWidth(250)
 
-        main_text = _get_text_label(
+        main_text = get_text_label(
             self, "Set new video speed:"
         )
-        postfix_text = _get_text_label(self, "X")
+        postfix_text = get_text_label(self, "X")
 
         self._set_up_time_edit_widgets()
-        choice_button = _get_choice_button(self)
+        choice_button = get_choice_button(self)
 
         self._set_up_layouts(main_text, postfix_text, choice_button)
 
@@ -96,10 +96,10 @@ class AskConfirmationDialogWindow(QDialog):
         self.setWindowTitle("ask confirmation dialog")
         self.setMinimumWidth(250)
 
-        main_text = _get_text_label(
+        main_text = get_text_label(
             self, text
         )
-        choice_button = _get_choice_button(self)
+        choice_button = get_choice_button(self)
 
         self._set_up_layouts(main_text, choice_button)
 
@@ -109,27 +109,6 @@ class AskConfirmationDialogWindow(QDialog):
         main_layout.addWidget(choice_button)
 
         self.setLayout(main_layout)
-
-
-def _get_text_label(
-    obj: Union[QDialog, QWidget], text: str
-) -> QtWidgets.QLabel:
-    label = QtWidgets.QLabel(obj)
-    label.setText(text)
-    label.adjustSize()
-
-    return label
-
-
-def _get_choice_button(obj: QDialog):
-    choice_button = QDialogButtonBox(
-        QDialogButtonBox.StandardButton.Ok |
-        QDialogButtonBox.StandardButton.Cancel
-    )
-    choice_button.accepted.connect(obj.accept)
-    choice_button.rejected.connect(obj.reject)
-
-    return choice_button
 
 
 def run_trim_dialog_window() -> list:

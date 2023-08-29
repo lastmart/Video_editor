@@ -1,21 +1,20 @@
-from VideoEditor.video_editor import \
-    merge_videos_and_save, trim_and_save_video, \
-    set_video_speed_and_save, copy_video
-from .supporting_windows import \
-    run_trim_dialog_window, run_set_speed_dialog_window, \
-    run_close_event_dialog_window, run_undo_dialog_window,\
-    _get_text_label
+import sys
 from PyQt6.QtCore import Qt, QUrl
 from PyQt6.QtWidgets import \
     QApplication, QWidget, QVBoxLayout, QPushButton, QFileDialog, \
     QSlider, QStyle, QHBoxLayout, QMenu, QMenuBar
 from PyQt6.QtMultimediaWidgets import QVideoWidget
 from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput
+from VideoEditor.video_editor import \
+    merge_videos_and_save, trim_and_save_video, \
+    set_video_speed_and_save, copy_video
+from .supporting_windows import \
+    run_trim_dialog_window, run_set_speed_dialog_window, \
+    run_close_event_dialog_window, run_undo_dialog_window
 from .cache_handler import CacheHandler
-from .utils import OperationSystem, OperationType, process_paths
-from .constructor import get_volume_icon
+from .utils import OperationType, OperationSystem, process_paths
+from .constructor import get_volume_icon, get_text_label
 from .message import *
-import sys
 
 
 OPERATION_SYSTEM = OperationSystem.WINDOWS \
@@ -40,7 +39,7 @@ class VideoEditorWindow(QWidget):
         self.have_unsaved_changes = False
 
         self._set_up_play_button()
-        self.prefix_text = _get_text_label(self, "00:00")
+        self.prefix_text = get_text_label(self, "00:00")
         self._set_up_video_slider()
         self._set_up_audio_slider()
         self._set_up_layouts()
@@ -77,13 +76,17 @@ class VideoEditorWindow(QWidget):
     def _set_up_video_slider(self):
         self.video_slider = QSlider(Qt.Orientation.Horizontal)
         self.video_slider.setRange(0, 0)
-        self.video_slider.sliderMoved.connect(self._set_video_position)
+        self.video_slider.sliderMoved.connect(
+            lambda position: self.media_player.setPosition(position)
+        )
 
     def _set_up_audio_slider(self):
         self.audio_slider = QSlider(Qt.Orientation.Horizontal)
         self.audio_slider.setRange(0, 100)
         self.audio_slider.setValue(50)
-        self.audio_slider.sliderMoved.connect(self._set_audio_position)
+        self.audio_slider.sliderMoved.connect(
+            lambda position: self.audio_output.setVolume(position / 100)
+        )
 
     def _set_up_layouts(self):
         upper_control_layout = QHBoxLayout()
@@ -103,10 +106,11 @@ class VideoEditorWindow(QWidget):
         self.setLayout(main_layout)
 
     def _set_up_media_player(self):
-        self.media_player.setVideoOutput(self.video_widget)
         self.media_player.sourceChanged.connect(self._change_play_button_icon)
         self.media_player.positionChanged.connect(self._update_time_dependent)
-        self.media_player.durationChanged.connect(self._change_slider_duration)
+        self.media_player.durationChanged.connect(
+            lambda duration: self.video_slider.setRange(0, duration)
+        )
         self.media_player.mediaStatusChanged.connect(
             self._process_media_status_changed
         )
@@ -115,6 +119,7 @@ class VideoEditorWindow(QWidget):
         self.media_player.setSource(
             QUrl.fromLocalFile(self.cache_handler.get_current_path_to_look())
         )
+        self.media_player.setVideoOutput(self.video_widget)
         self.media_player.setAudioOutput(self.audio_output)
         self.play_button.setEnabled(True)
 
@@ -133,7 +138,7 @@ class VideoEditorWindow(QWidget):
                 self._play_resulting_video()
 
     def open_file(self):
-        user_file_path = self.get_open_file_name()
+        user_file_path = get_open_file_name(self)
 
         if user_file_path == "":
             return
@@ -156,7 +161,7 @@ class VideoEditorWindow(QWidget):
             raise_no_file_error()
             return
 
-        user_file_path = self.get_save_file_name()
+        user_file_path = get_save_file_name(self)
 
         if user_file_path == "":
             return
@@ -174,7 +179,7 @@ class VideoEditorWindow(QWidget):
             raise_no_file_error()
             return
 
-        user_file_paths = self.get_open_file_names()
+        user_file_paths = get_open_file_names(self)
 
         if len(user_file_paths) == 0:
             return
@@ -270,19 +275,6 @@ class VideoEditorWindow(QWidget):
                 self.style().standardIcon(QStyle.StandardPixmap.SP_MediaPlay)
             )
 
-    def _set_video_position(self, position):
-        self.media_player.setPosition(position)
-
-    def _set_audio_position(self, position):
-        volume = position / 100
-        self.audio_output.setVolume(volume)
-
-    def _change_slider_duration(self, duration):
-        self.video_slider.setRange(0, duration)
-
-    def _update_slider_position(self, position):
-        self.video_slider.setValue(position)
-
     def _update_prefix_text(self, position):
         minutes = int(position / 60000)
         seconds = int((position / 1000) % 60)
@@ -291,7 +283,7 @@ class VideoEditorWindow(QWidget):
 
     def _update_time_dependent(self, position):
         self._update_prefix_text(position)
-        self._update_slider_position(position)
+        self.video_slider.setValue(position)
 
     def closeEvent(self, event):
         need_to_close_window = True
@@ -304,22 +296,25 @@ class VideoEditorWindow(QWidget):
         else:
             event.ignore()
 
-    @process_paths(OPERATION_SYSTEM)
-    def get_open_file_name(self):
-        user_file_path, _ = QFileDialog.getOpenFileName(self, filter="(*.mp4)")
-        return user_file_path
 
-    @process_paths(OPERATION_SYSTEM)
-    def get_open_file_names(self):
-        user_file_path, _ = QFileDialog.getOpenFileNames(
-            self, filter="(*.mp4)"
-        )
-        return user_file_path
+@process_paths(OPERATION_SYSTEM)
+def get_open_file_name(obj):
+    user_file_path, _ = QFileDialog.getOpenFileName(obj, filter="(*.mp4)")
+    return user_file_path
 
-    @process_paths(OPERATION_SYSTEM)
-    def get_save_file_name(self):
-        user_file_path, _ = QFileDialog.getSaveFileName(self, filter="(*.mp4)")
-        return user_file_path
+
+@process_paths(OPERATION_SYSTEM)
+def get_open_file_names(obj):
+    user_file_path, _ = QFileDialog.getOpenFileNames(
+        obj, filter="(*.mp4)"
+    )
+    return user_file_path
+
+
+@process_paths(OPERATION_SYSTEM)
+def get_save_file_name(obj):
+    user_file_path, _ = QFileDialog.getSaveFileName(obj, filter="(*.mp4)")
+    return user_file_path
 
 
 def run_gui():

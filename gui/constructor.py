@@ -1,9 +1,7 @@
-from PyQt6.QtCore import Qt, QUrl
+from PyQt6 import QtWidgets
 from PyQt6.QtWidgets import \
-    QApplication, QWidget, QVBoxLayout, QPushButton, QFileDialog, \
-    QSlider, QStyle, QHBoxLayout, QMenu, QMenuBar, QLabel
-from PyQt6.QtMultimediaWidgets import QVideoWidget
-from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput
+    QStyle, QLabel, QDialog, QDialogButtonBox, QWidget
+from typing import Union
 
 
 def get_volume_icon(obj: QWidget) -> QLabel:
@@ -14,3 +12,24 @@ def get_volume_icon(obj: QWidget) -> QLabel:
         )
     )
     return icon
+
+
+def get_text_label(
+    obj: Union[QDialog, QWidget], text: str
+) -> QtWidgets.QLabel:
+    label = QtWidgets.QLabel(obj)
+    label.setText(text)
+    label.adjustSize()
+
+    return label
+
+
+def get_choice_button(obj: QDialog) -> QDialogButtonBox:
+    choice_button = QDialogButtonBox(
+        QDialogButtonBox.StandardButton.Ok |
+        QDialogButtonBox.StandardButton.Cancel
+    )
+    choice_button.accepted.connect(obj.accept)
+    choice_button.rejected.connect(obj.reject)
+
+    return choice_button

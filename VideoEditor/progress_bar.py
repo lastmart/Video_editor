@@ -1,13 +1,15 @@
 from __future__ import unicode_literals, print_function
+from .utils import convert_date_to_seconds
+import PySimpleGUI as sg
 from tqdm import tqdm
+from math import ceil
 import contextlib
+import tempfile
 import gevent
 import gevent.monkey
-import os
 import shutil
 import socket
-import tempfile
-from .utils import convert_date_to_seconds
+import os
 
 gevent.monkey.patch_all(thread=False)
 
@@ -75,52 +77,33 @@ def _watch_progress(handler):
 
 
 @contextlib.contextmanager
-def show_progress(total_duration):
+def show_progress_in_console(total_duration: float) -> None:
     """Create a unix-domain socket to watch progress and render tqdm
     progress bar."""
-    # file = r'/mnt/c/Users/egore/OneDrive/Документы/temp1.txt'
-    # file = open(file, mode='w')
-    with tqdm(total=round(total_duration, 2)) as bar:  # file=file
-        def handler(key, value):
+    with tqdm(total=round(total_duration, 2)) as bar:
+        def console_handler(key: str, value: str) -> None:
             if key == 'out_time':
                 time = convert_date_to_seconds(value)
                 bar.update(time - bar.n)
             elif key == 'progress' and value == 'end':
                 bar.update(bar.total - bar.n)
 
-        with _watch_progress(handler) as socket_filename:
+        with _watch_progress(console_handler) as socket_filename:
             yield socket_filename
-    # file.close()
 
-# if __name__ == '__main__':
-#     total_duration = float(
-#         ffmpeg.probe(
-#             r"/mnt/c/Users/egore/OneDrive/Документы/python/python_task/ASCII_ART/document_5231008315256878506.mp4")[
-#             'format']['duration'])
-#
-#     with show_progress(total_duration * 2) as socket_filename:
-#         # (ffmpeg
-#         #  .input(r"/mnt/c/Users/egore/OneDrive/Документы/python/python_task/ASCII_ART/document_5231008315256878506.mp4")
-#         #  .output(r'/mnt/c/Users/egore/OneDrive/Документы/output.mp4')
-#         #  .global_args('-progress', 'unix://{}'.format(socket_filename))
-#         #  .overwrite_output()
-#         #  .run(capture_stdout=True, capture_stderr=True)
-#         #  )
-#
-#         set_video_speed_and_save(r"/mnt/c/Users/egore/OneDrive/Документы/python/python_task/ASCII_ART/document_5231008315256878506.mp4",
-#                                  0.5, r'/mnt/c/Users/egore/OneDrive/Документы/output.mp4', is_overwrite=True, socket_filename=socket_filename)
-#
-#         # input_video = ffmpeg.input(
-#         #     r"/mnt/c/Users/egore/OneDrive/Документы/python/python_task/ASCII_ART/document_5231008315256878506.mp4")
-#         # output_path = r'/mnt/c/Users/egore/OneDrive/Документы/output.mp4'
-#         # video = input_video.video.filter('setpts', f'{1 / 2:0.01}*PTS')
-#         # audio = (input_video.audio
-#         #          .filter('asetpts', f'{round(1 / 2, 1)}*PTS')
-#         #          .filter("atempo", 2))
-#         # a = ffmpeg.concat(video, audio, v=1, a=1).node
-#         # out = (ffmpeg.output(a[0], a[1], output_path, format='mp4')
-#         #        .global_args('-progress',
-#         #                     'unix://{}'.format(socket_filename))
-#         #        .overwrite_output()
-#         #        .run(capture_stdout=True, capture_stderr=True)
-#         #        )
+
+@contextlib.contextmanager
+def show_progress_in_gui(total_duration: float) -> None:
+    """Create a unix-domain socket to watch progress and render PuSimpleGUI
+        progress bar."""
+    total_duration = ceil(total_duration)
+
+    def gui_handler(key: str, value: str) -> None:
+        if key == 'out_time':
+            time = convert_date_to_seconds(value)
+            sg.one_line_progress_meter('Progress bar', time, total_duration)
+        elif key == 'progress' and value == 'end':
+            sg.one_line_progress_meter('Progress bar', total_duration, total_duration)
+
+    with _watch_progress(gui_handler) as socket_filename:
+        yield socket_filename

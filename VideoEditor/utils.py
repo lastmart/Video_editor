@@ -1,9 +1,12 @@
 from collections.abc import Iterable
 from operator import floordiv
 from typing import Union
+from enum import Enum
 import ffmpeg
 import sys
 import os
+
+Usage = Enum('Usage', ['GUI', 'CONSOLE'])
 
 
 def check_paths_correctness(paths: Union[str, list[str]]) -> None:

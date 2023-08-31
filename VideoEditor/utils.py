@@ -9,14 +9,18 @@ import os
 Usage = Enum('Usage', ['GUI', 'CONSOLE'])
 
 
-def check_paths_correctness(paths: Union[str, list[str]]) -> None:
+def check_paths_correctness(paths: Union[str, list[str]],
+                            possible_formats=None) -> None:
+    if possible_formats is None:
+        possible_formats = {'mp4'}
     if isinstance(paths, str):
         paths = [paths]
     for e in paths:
         if not os.path.isdir(e.rsplit(os.sep, 1)[0]):
-            raise IOError(f'{e} is not valid directory') from e
-        if e.rsplit('.', 1)[-1] not in {'mp4', 'jpg'}:
-            raise ValueError(f"{e} hasn't mp4 or jpg format")
+            raise IOError('{} is not valid directory'.format(e)) from e
+        if e.rsplit('.', 1)[-1] not in possible_formats:
+            raise ValueError("{} hasn't {} format"
+                             .format(e, ", ".join(possible_formats)))
 
 
 def convert_date_to_seconds(date: Union[Iterable, str]) -> int:
@@ -26,7 +30,7 @@ def convert_date_to_seconds(date: Union[Iterable, str]) -> int:
             sep_date[-1] = sep_date[-1].split('.')[0]
             date = list(map(int, sep_date))
         except ValueError as e:
-            raise TypeError(f'{date} is not in format HH:MM:SS.ms*') from e
+            raise TypeError('{} is not in format HH:MM:SS.ms*'.format(date)) from e
     if isinstance(date, Iterable):
         time_in_seconds = 0
         date = list(date)
@@ -34,12 +38,12 @@ def convert_date_to_seconds(date: Union[Iterable, str]) -> int:
         for number in date:
             if not isinstance(number, int):
                 raise TypeError(
-                    f'Collection over time contains more than just integer numbers')
+                    'Collection over time contains more than just integer numbers')
             time_in_seconds += number * (60 ** power)
             power -= 1
         date = time_in_seconds
     else:
-        raise ValueError(f'{date} can not converted to seconds')
+        raise ValueError('{} can not converted to seconds'.format(date))
     return date
 
 
@@ -93,11 +97,14 @@ def get_video_duration(file: Union[str, ffmpeg.nodes.Node]) -> float:
     try:
         probe = ffmpeg.probe(file)
     except TypeError as e:
-        raise TypeError(f'You can not get duration of {type(file)}') from e
+        raise TypeError('You can not get duration of {}'.format(type(file))) from e
     except ffmpeg.Error as e:
         print(e.stderr.decode(), file=sys.stderr)
         raise e
-    return float(probe['format']['duration'])
+    try:
+        return float(probe['format']['duration'])
+    except KeyError:
+        return 0
 
 
 def get_information_about_stream(file: Union[str, ffmpeg.nodes.Node],
@@ -114,5 +121,6 @@ def get_information_about_stream(file: Union[str, ffmpeg.nodes.Node],
          stream['codec_type'] == stream_name), None
     )
     if video_stream is None:
-        raise FileNotFoundError(f'No {stream_name} stream found in\n {file}')
+        raise FileNotFoundError('No {} stream found in\n {}'
+                                .format(stream_name, file))
     return video_stream

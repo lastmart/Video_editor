@@ -35,7 +35,8 @@ def merge_videos_and_save(
     """
     if len(videos_paths) < 2:
         raise ValueError(
-            f'You can merge only two or more videos, but you got {len(videos_paths)}'
+            'You can merge only two or more videos, but you got {}'
+            .format(len(videos_paths))
         )
 
     first_video_information = get_information_about_stream(
@@ -77,7 +78,8 @@ def trim_and_save_video(
         start_time: Union[tuple, str],
         end_time: Union[tuple, str],
         path_to_save: str,
-        is_overwrite: bool = False
+        is_overwrite: bool = False,
+        mode: Usage = Usage.GUI
 ) -> None:
     """
     Trim video and save result
@@ -86,6 +88,7 @@ def trim_and_save_video(
     :param start_time: left border to trim
     :param end_time: right border to trim
     :param is_overwrite: overwrites the video even if there is already a video in the save path
+    :param mode: where to display progress: in the console or in the GUI
     :return: None
     """
     video_information = get_information_about_stream(video_path, 'video')
@@ -95,9 +98,9 @@ def trim_and_save_video(
     if start_time > end_time or start_time < 0 or end_time > float(
             video_information['duration']):
         raise RuntimeError('You specified the wrong cropping borders')
-    result_video_duration = start_time - end_time
+    result_video_duration = end_time - start_time
     save_video(trim_video(stream, start_time, end_time), path_to_save,
-               is_overwrite, result_video_duration)
+               is_overwrite, result_video_duration, mode=mode)
 
 
 def trim_video(
@@ -120,6 +123,7 @@ def set_video_speed_and_save(
         speed: Union[int, float, str],
         path_to_save: str,
         is_overwrite: bool = False,
+        mode: Usage = Usage.GUI
 ) -> None:
     """
     Set speed of video and save result
@@ -127,25 +131,23 @@ def set_video_speed_and_save(
     :param path_to_save: the absolute path to the result video
     :param speed: speed of result video
     :param is_overwrite: overwrites the video even if there is already a video in the save path
+    :param mode: where to display progress: in the console or in the GUI
     :return: None
     """
     speed = round(float(speed), 1) if isinstance(speed, str) else speed
     if speed < 0.5:
-        raise ValueError(f'{speed} is very small')
+        raise ValueError('{} is very small'.format(speed))
     changed_speed_video = set_video_speed(open_videos(video_path), speed)
-    print(get_video_duration(video_path))
-    print((1 / speed))
-    print(get_video_duration(video_path) * (1 / speed))
     result_video_duration = round(get_video_duration(video_path) * (1 / speed),
                                   2)
     save_video(changed_speed_video, path_to_save, is_overwrite,
-               result_video_duration)
+               result_video_duration, mode=mode)
 
 
 def set_video_speed(input_video: ffmpeg.Stream, speed: float) -> ffmpeg.Stream:
-    video = input_video.video.filter('setpts', f'{1 / speed:0.01}*PTS')
+    video = input_video.video.filter('setpts', '{}*PTS'.format(round(1 / speed, 1)))
     audio = (input_video.audio
-             .filter('asetpts', f'{round(1 / speed, 1)}*PTS')
+             .filter('asetpts', '{}*PTS'.format(round(1 / speed, 1)))
              .filter("atempo", speed))
     return ffmpeg.concat(video, audio, v=1, a=1).node
 
@@ -156,26 +158,31 @@ def overlay_video_on_another_and_save(
         path_to_save: str,
         x_shift: int = 0,
         y_shift: int = 0,
-        is_overwrite: bool = False
+        is_overwrite: bool = False,
+        mode: Usage = Usage.GUI
 ) -> None:
     overlay_height, overlay_width = scale_frame_in_bounds(main_video_path,
                                                           overlay_path,
                                                           x_shift, y_shift)
     main_video = open_videos(main_video_path)
-    overlay_video = open_videos(overlay_path) \
-        .filter('scale', overlay_width, overlay_height)
+    overlay_video = (open_videos(overlay_path, {'mp4', 'png', 'jpg'})
+                     .filter('scale', overlay_width, overlay_height))
     overlay_result = (
         main_video
         .overlay(overlay_video, x=x_shift, y=y_shift)
         .concat(main_video.audio, a=1).node
     )
-    save_video(overlay_result, path_to_save, is_overwrite=is_overwrite)
+    result_video_duration = max(get_video_duration(main_video_path),
+                                get_video_duration(overlay_path))
+    save_video(overlay_result, path_to_save, is_overwrite=is_overwrite,
+               duration=result_video_duration, mode=mode)
 
 
 def copy_video(input_path: str, output_path: str, is_overwrite: bool = True) -> None:
     video = open_videos(input_path)
-    duration = get_video_duration(input_path)
-    save_video(video, output_path, duration=duration, is_overwrite=is_overwrite)
+    video_duration = get_video_duration(input_path)
+    save_video(video, output_path, duration=video_duration,
+               is_overwrite=is_overwrite, mode=Usage.GUI)
 
 
 def generate_thumbnail(
@@ -235,11 +242,18 @@ def save_video(
         out.run(overwrite_output=is_overwrite)
 
 
-def open_videos(input_paths: Union[list[str], str]) -> \
+def open_videos(input_paths: Union[list[str], str],
+                possible_formats: set[str] = None) -> \
         Union[list[ffmpeg.Stream], ffmpeg.Stream]:
-    check_paths_correctness(input_paths)
+    check_paths_correctness(input_paths, possible_formats)
     if isinstance(input_paths, str):
         return ffmpeg.input(input_paths)
     elif isinstance(input_paths, list):
         return [ffmpeg.input(input_path) for input_path in input_paths]
     raise TypeError
+
+
+if __name__ == '__main__':
+    overlay_video_on_another_and_save('/mnt/c/Users/egore/OneDrive/Документы/python/python_task/Video_editor/resources/shower.mp4',
+                                      '/mnt/c/Users/egore/OneDrive/Документы/python/python_task/Video_editor/resources/gachi_girls.mp4',
+                                      '/mnt/c/Users/egore/OneDrive/Документы/res', is_overwrite=True)

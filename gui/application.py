@@ -241,7 +241,7 @@ class VideoEditorWindow(QWidget):
         if speed is None:
             return
 
-        speed_float = speed.minute() + speed.second()/10
+        speed_float = speed.minute() + speed.second()/100
 
         try:
             set_video_speed_and_save(

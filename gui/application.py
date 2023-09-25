@@ -241,15 +241,13 @@ class VideoEditorWindow(QWidget):
         if speed is None:
             return
 
-        speed_float = speed.minute() + speed.second()/100
-
         try:
             set_video_speed_and_save(
                 self.cache_handler.get_current_path_to_look(),
-                speed_float,
+                speed,
                 self.cache_handler.get_current_path_to_save()
             )
-        except ZeroDivisionError:
+        except (ZeroDivisionError, ValueError):
             raise_wrong_speed_error()
         else:
             self.cache_handler.update_current_index(OperationType.INCREASE)

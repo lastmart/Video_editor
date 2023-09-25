@@ -1,7 +1,7 @@
 from PyQt6 import QtWidgets
 from PyQt6.QtWidgets import \
-    QDialog, QVBoxLayout, QHBoxLayout
-from PyQt6.QtCore import QTime
+    QDialog, QVBoxLayout, QHBoxLayout, QDoubleSpinBox
+from PyQt6.QtCore import QTime, QLocale, Qt
 from .constructor import get_text_label, get_choice_button
 
 
@@ -70,13 +70,15 @@ class SetSpeedDialogWindow(QDialog):
         self._set_up_layouts(main_text, postfix_text, choice_button)
 
     def _set_up_time_edit_widgets(self):
-        self.time_edit = QtWidgets.QTimeEdit(self)
-        self.time_edit.setDisplayFormat("mm:ss")
+        self.speed_edit = QDoubleSpinBox(self)
+        self.speed_edit.setDecimals(1)
+        self.speed_edit.setValue(1.0)
+        self.speed_edit.setLocale(QLocale("C"))
 
     def _set_up_layouts(self, main_text, postfix_text, choice_button):
         time_edit_layout = QHBoxLayout()
         time_edit_layout.addWidget(main_text)
-        time_edit_layout.addWidget(self.time_edit)
+        time_edit_layout.addWidget(self.speed_edit)
         time_edit_layout.addWidget(postfix_text)
 
         main_layout = QVBoxLayout()
@@ -86,7 +88,7 @@ class SetSpeedDialogWindow(QDialog):
         self.setLayout(main_layout)
 
     def get_speed(self) -> QTime:
-        return self.time_edit.time()
+        return self.speed_edit.value()
 
 
 class AskConfirmationDialogWindow(QDialog):

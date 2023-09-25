@@ -14,7 +14,7 @@ from .supporting_windows import \
 from .cache_handler import CacheHandler
 from .utils import \
     OperationType, OperationSystem, OS_TYPE, get_open_file_name, \
-    get_open_file_names, get_save_file_name
+    get_open_file_names, get_save_file_name, process_time
 from .constructor import get_volume_icon, get_text_label
 from .message import *
 
@@ -206,7 +206,7 @@ class VideoEditorWindow(QWidget):
             raise_no_file_error()
             return
 
-        fragment_time = run_trim_dialog_window()
+        fragment_time = run_trim_dialog_window(self.video_slider.value())
 
         if fragment_time is None:
             return
@@ -277,8 +277,7 @@ class VideoEditorWindow(QWidget):
             )
 
     def _update_prefix_text(self, position):
-        minutes = int(position / 60000)
-        seconds = int((position / 1000) % 60)
+        minutes, seconds = process_time(position)[1:3]
 
         self.prefix_text.setText(f"{minutes:02d}:{seconds:02d}")
 

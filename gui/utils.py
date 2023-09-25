@@ -73,3 +73,11 @@ def get_open_file_names(obj):
 def get_save_file_name(obj):
     user_file_path, _ = QFileDialog.getSaveFileName(obj, filter="(*.mp4)")
     return user_file_path
+
+
+def process_time(time: int) -> tuple:
+    hours = int(time / 3600000)
+    minutes = int((time / 60000) % 60)
+    seconds = int((time / 1000) % 60)
+
+    return hours, minutes, seconds, 0

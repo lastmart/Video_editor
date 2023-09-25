@@ -1,12 +1,13 @@
 from PyQt6 import QtWidgets
 from PyQt6.QtWidgets import \
     QDialog, QVBoxLayout, QHBoxLayout, QDoubleSpinBox
-from PyQt6.QtCore import QTime, QLocale, Qt
+from PyQt6.QtCore import QTime, QLocale
 from .constructor import get_text_label, get_choice_button
+from .utils import process_time
 
 
 class TrimDialogWindow(QDialog):
-    def __init__(self):
+    def __init__(self, current_time: int):
         super().__init__()
 
         self.setWindowTitle("trim dialog")
@@ -18,17 +19,19 @@ class TrimDialogWindow(QDialog):
         start_text = get_text_label(self, "start time")
         end_text = get_text_label(self, "end time")
 
-        self._set_up_time_edit_widgets()
+        self._set_up_time_edit_widgets(current_time)
         choice_button = get_choice_button(self)
 
         self._set_up_layouts(choice_button, end_text, main_text, start_text)
 
-    def _set_up_time_edit_widgets(self):
+    def _set_up_time_edit_widgets(self, current_time):
         self.start_edit = QtWidgets.QTimeEdit(self)
         self.start_edit.setDisplayFormat("mm:ss")
+        self.start_edit.setTime(QTime(0, 0, 0, 0))
 
         self.end_edit = QtWidgets.QTimeEdit(self)
         self.end_edit.setDisplayFormat("mm:ss")
+        self.end_edit.setTime(QTime(*process_time(current_time)))
 
     def _set_up_layouts(self, choice_button, end_text, main_text, start_text):
         start_layout = QHBoxLayout()
@@ -113,8 +116,8 @@ class AskConfirmationDialogWindow(QDialog):
         self.setLayout(main_layout)
 
 
-def run_trim_dialog_window() -> list:
-    window = TrimDialogWindow()
+def run_trim_dialog_window(current_time: int) -> list:
+    window = TrimDialogWindow(current_time)
     window.show()
     if window.exec() == QDialog.DialogCode.Accepted:
         return window.get_fragment_time()

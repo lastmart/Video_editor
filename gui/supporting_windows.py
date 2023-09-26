@@ -2,19 +2,20 @@ from PyQt6 import QtWidgets
 from PyQt6.QtWidgets import \
     QDialog, QVBoxLayout, QHBoxLayout, QDoubleSpinBox
 from PyQt6.QtCore import QTime, QLocale
-from .constructor import get_text_label, get_choice_button
-from .utils import process_time
+from .constructor import \
+    get_text_label, get_choice_button, get_filename_button
+from .utils import process_time, get_open_file_names
 
 
 class TrimDialogWindow(QDialog):
-    def __init__(self, current_time: int):
+    def __init__(self, current_time: int, text: str):
         super().__init__()
 
         self.setWindowTitle("trim dialog")
         self.setMinimumWidth(250)
 
         main_text = get_text_label(
-            self, "Select the fragment that will remain:"
+            self, text
         )
         start_text = get_text_label(self, "start time")
         end_text = get_text_label(self, "end time")
@@ -51,7 +52,6 @@ class TrimDialogWindow(QDialog):
         self.setLayout(main_layout)
 
     def get_fragment_time(self) -> list:
-        print(self.start_edit.time().second())
         return [self.start_edit.time(), self.end_edit.time()]
 
 
@@ -116,11 +116,65 @@ class AskConfirmationDialogWindow(QDialog):
         self.setLayout(main_layout)
 
 
-def run_trim_dialog_window(current_time: int) -> list:
-    window = TrimDialogWindow(current_time)
+class MergeIntoDialogWindow(QDialog):
+    def __init__(self, current_time: int):
+        super().__init__()
+
+        self.setWindowTitle("merge into dialog")
+        self.setMinimumWidth(250)
+        self.filenames = None
+
+        main_text = get_text_label(
+            self, "Select the time at which the merge will be performed"
+        )
+
+        self._set_up_time_edit_widgets(current_time)
+        choice_button = get_choice_button(self)
+        filename_button = get_filename_button(
+            self,
+            self._get_open_filenames_wrapper
+        )
+
+        self._set_up_layouts(choice_button, filename_button, main_text)
+
+    def _set_up_time_edit_widgets(self, current_time):
+        self.time_edit = QtWidgets.QTimeEdit(self)
+        self.time_edit.setDisplayFormat("mm:ss")
+        self.time_edit.setTime(QTime(*process_time(current_time)))
+
+    def _set_up_layouts(self, choice_button, filename_button, main_text):
+        time_layout = QHBoxLayout()
+        time_layout.addWidget(main_text)
+        time_layout.addWidget(self.time_edit)
+
+        main_layout = QVBoxLayout()
+        main_layout.addLayout(time_layout)
+        main_layout.addWidget(filename_button)
+        main_layout.addWidget(choice_button)
+
+        self.setLayout(main_layout)
+
+    def _get_open_filenames_wrapper(self) -> None:
+        self.filenames = get_open_file_names(self)
+
+    def get_merge_information(self) -> tuple[QTime, list[str]]:
+        return self.time_edit.time(), self.filenames
+
+
+def run_trim_dialog_window(current_time: int, main_text: str) -> list:
+    window = TrimDialogWindow(current_time, main_text)
     window.show()
     if window.exec() == QDialog.DialogCode.Accepted:
         return window.get_fragment_time()
+    else:
+        return None
+
+
+def run_merge_into_dialog_window(current_time: int) -> tuple[QTime, list[str]]:
+    window = MergeIntoDialogWindow(current_time)
+    window.show()
+    if window.exec() == QDialog.DialogCode.Accepted:
+        return window.get_merge_information()
     else:
         return None
 

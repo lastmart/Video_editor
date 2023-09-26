@@ -10,7 +10,7 @@ from VideoEditor.video_editor import \
     set_video_speed_and_save, copy_video
 from .supporting_windows import \
     run_trim_dialog_window, run_set_speed_dialog_window, \
-    run_ask_confirmation_dialog_window
+    run_ask_confirmation_dialog_window, run_merge_into_dialog_window
 from .cache_handler import cache_handler
 from .utils import \
     OperationType, OperationSystem, OS_TYPE, get_open_file_name, \
@@ -76,7 +76,10 @@ class VideoEditorWindow(QWidget):
 
         partial_tools_submenu = QMenu("&Partial tools", self)
         edit_menu.addMenu(partial_tools_submenu)
-        # TODO
+
+        partial_tools_submenu.addAction("Merge into", self.merge_into)
+        partial_tools_submenu.addAction("Cut out", self.cut_out)
+        partial_tools_submenu.addAction("Set speed", self.set_partial_speed)
 
         history_submenu = QMenu("&History", self)
         edit_menu.addMenu(history_submenu)
@@ -248,12 +251,35 @@ class VideoEditorWindow(QWidget):
             self.have_unsaved_changes = True
             self._play_resulting_video()
 
+    # TODO
+    def merge_into(self):
+        print(run_merge_into_dialog_window(self.video_slider.value()))
+
+    def _base_merge(self, get_users_data: callable):
+        pass
+
     def trim(self):
+        main_text = "Select the fragment that will remain:"
+        self._base_cut(main_text, trim_and_save_video)
+
+    def cut_out(self):
+        main_text = "Select the fragment that will be deleted:"
+        # TODO
+        pass
+        self._base_cut(main_text, trim_and_save_video)
+
+    def _base_cut(self,
+                  main_text: str,
+                  cut_func: callable([str, int, int, str])
+                  ) -> None:
         if cache_handler.current_index == 0:
             raise_no_file_error()
             return
 
-        fragment_time = run_trim_dialog_window(self.video_slider.value())
+        fragment_time = run_trim_dialog_window(
+            self.video_slider.value(),
+            main_text
+        )
 
         if fragment_time is None:
             return
@@ -269,7 +295,7 @@ class VideoEditorWindow(QWidget):
                 cache_handler.current_index + 1
             )
 
-            trim_and_save_video(
+            cut_func(
                 cache_handler.get_current_path_to_look(),
                 start_time,
                 end_time,
@@ -308,6 +334,9 @@ class VideoEditorWindow(QWidget):
             cache_handler.update_current_index(OperationType.INCREASE)
             self.have_unsaved_changes = True
             self._play_resulting_video()
+
+    def set_partial_speed(self):
+        pass
 
     def _process_media_status_changed(self, status: QMediaPlayer.MediaStatus):
         if status == QMediaPlayer.MediaStatus.EndOfMedia:

@@ -1,6 +1,6 @@
 from PyQt6 import QtWidgets
 from PyQt6.QtWidgets import \
-    QStyle, QLabel, QDialog, QDialogButtonBox, QWidget
+    QStyle, QLabel, QDialog, QDialogButtonBox, QWidget, QPushButton
 from typing import Union
 
 
@@ -33,3 +33,10 @@ def get_choice_button(obj: QDialog) -> QDialogButtonBox:
     choice_button.rejected.connect(obj.reject)
 
     return choice_button
+
+
+def get_filename_button(obj: QDialog, func: callable) -> QPushButton:
+    button = QPushButton("Select file for merge", obj)
+    button.clicked.connect(func)
+
+    return button

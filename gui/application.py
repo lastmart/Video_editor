@@ -30,10 +30,6 @@ class VideoEditorWindow(QWidget):
         self.video_widget = QVideoWidget()
         self.audio_output = QAudioOutput()
 
-        cache_handler.prepare_cache_folder()
-
-        self.have_unsaved_changes = False
-
         self._set_up_play_button()
         self.prefix_text = get_text_label(self, "00:00")
         self._set_up_video_slider()
@@ -41,6 +37,22 @@ class VideoEditorWindow(QWidget):
         self._set_up_layouts()
         self._set_up_media_player()
         self._set_up_menu_bar()
+
+        self.have_unsaved_changes = False
+        self.configurate_cache_handler()
+
+    def configurate_cache_handler(self) -> None:
+        if not cache_handler.is_empty():
+            text = "Do you want to restore history from your previous session?"
+            need_to_restore = run_ask_confirmation_dialog_window(text)
+            if need_to_restore:
+                cache_handler.restore_history()
+                self.have_unsaved_changes = True
+                self._play_resulting_video()
+            else:
+                cache_handler.clear_cache(
+                    cache_handler.index_from_previous_session
+                )
 
     def _set_up_menu_bar(self):
         self.menu_bar = QMenuBar(self)
@@ -71,6 +83,7 @@ class VideoEditorWindow(QWidget):
 
         history_submenu.addAction("Undo", self.undo)
         history_submenu.addAction("Redo", self.redo)
+        history_submenu.addAction("Clear history", self.clear_history)
 
     def _set_up_play_button(self):
         self.play_button = QPushButton()
@@ -161,6 +174,11 @@ class VideoEditorWindow(QWidget):
                 self.have_unsaved_changes = True
                 self._play_resulting_video()
 
+    def clear_history(self):
+        cache_handler.clear_cache()
+        self.play_button.setEnabled(False)
+        self.have_unsaved_changes = False
+
     def open_file(self):
         user_file_path = get_open_file_name(self)
 
@@ -200,7 +218,7 @@ class VideoEditorWindow(QWidget):
             raise_save_error(user_file_path)
         else:
             self.have_unsaved_changes = False
-            get_success_message(user_file_path)
+            get_success_save_message(user_file_path)
 
     def merge_with(self):
         if cache_handler.current_index == 0:
@@ -329,7 +347,6 @@ class VideoEditorWindow(QWidget):
             need_to_close_window = run_ask_confirmation_dialog_window(text)
 
         if need_to_close_window:
-            cache_handler.clear_cache()
             event.accept()
         else:
             event.ignore()

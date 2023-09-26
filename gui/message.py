@@ -52,8 +52,13 @@ def raise_cache_error(file_path):
     get_base_message(text, MessageType.ERROR)
 
 
-def get_success_message(file_path):
+def get_success_save_message(file_path):
     text = f"The file was successfully saved to the path:\n'{file_path}'"
+    get_base_message(text, MessageType.SUCCESS)
+
+
+def get_success_clear_cache_message():
+    text = "The history cleared successfully"
     get_base_message(text, MessageType.SUCCESS)
 
 

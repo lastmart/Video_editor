@@ -10,8 +10,8 @@ from VideoEditor.video_editor import \
     set_video_speed_and_save, copy_video
 from .supporting_windows import \
     run_trim_dialog_window, run_set_speed_dialog_window, \
-    run_close_event_dialog_window, run_undo_dialog_window
-from .cache_handler import CacheHandler
+    run_ask_confirmation_dialog_window
+from .cache_handler import cache_handler
 from .utils import \
     OperationType, OperationSystem, OS_TYPE, get_open_file_name, \
     get_open_file_names, get_save_file_name, process_time
@@ -30,8 +30,7 @@ class VideoEditorWindow(QWidget):
         self.video_widget = QVideoWidget()
         self.audio_output = QAudioOutput()
 
-        self.cache_handler = CacheHandler()
-        self.cache_handler.prepare_cache_folder()
+        cache_handler.prepare_cache_folder()
 
         self.have_unsaved_changes = False
 
@@ -63,7 +62,15 @@ class VideoEditorWindow(QWidget):
         tools_submenu.addAction("Trim", self.trim)
         tools_submenu.addAction("Set speed", self.set_speed)
 
-        edit_menu.addAction("Undo", self.undo)
+        partial_tools_submenu = QMenu("&Partial tools", self)
+        edit_menu.addMenu(partial_tools_submenu)
+        # TODO
+
+        history_submenu = QMenu("&History", self)
+        edit_menu.addMenu(history_submenu)
+
+        history_submenu.addAction("Undo", self.undo)
+        history_submenu.addAction("Redo", self.redo)
 
     def _set_up_play_button(self):
         self.play_button = QPushButton()
@@ -120,22 +127,36 @@ class VideoEditorWindow(QWidget):
 
     def _play_resulting_video(self):
         self.media_player.setSource(
-            QUrl.fromLocalFile(self.cache_handler.get_current_path_to_look())
+            QUrl.fromLocalFile(cache_handler.get_current_path_to_look())
         )
         self.media_player.setVideoOutput(self.video_widget)
         self.media_player.setAudioOutput(self.audio_output)
         self.play_button.setEnabled(True)
 
     def undo(self):
-        need_to_undo = run_undo_dialog_window()
+        text = "Are you sure you want to undo last action?"
+        need_to_undo = run_ask_confirmation_dialog_window(text)
 
         if need_to_undo:
             try:
-                self.cache_handler.undo()
+                cache_handler.undo()
             except FileNotFoundError:
                 raise_nothing_to_undo_error()
             except IOError as e:
                 raise_cache_error(e.__str__())
+            else:
+                self.have_unsaved_changes = True
+                self._play_resulting_video()
+
+    def redo(self):
+        text = "Are you sure you want to redo previous action?"
+        need_to_redo = run_ask_confirmation_dialog_window(text)
+
+        if need_to_redo:
+            try:
+                cache_handler.redo()
+            except FileNotFoundError:
+                raise_nothing_to_redo_error()
             else:
                 self.have_unsaved_changes = True
                 self._play_resulting_video()
@@ -147,20 +168,24 @@ class VideoEditorWindow(QWidget):
             return
 
         try:
+            cache_handler.prepare_cache_folder(
+                cache_handler.current_index + 1
+            )
+
             copy_video(
-                user_file_path, self.cache_handler.get_current_path_to_save()
+                user_file_path, cache_handler.get_current_path_to_save()
             )
         except IOError:
             raise_open_error(user_file_path)
         except ValueError:
             raise_wrong_extension_error(user_file_path)
         else:
-            self.cache_handler.update_current_index(OperationType.INCREASE)
+            cache_handler.update_current_index(OperationType.INCREASE)
             self.have_unsaved_changes = False
             self._play_resulting_video()
 
     def save_file(self):
-        if self.cache_handler.current_index == 0:
+        if cache_handler.current_index == 0:
             raise_no_file_error()
             return
 
@@ -170,7 +195,7 @@ class VideoEditorWindow(QWidget):
             return
 
         try:
-            self.cache_handler.save_from_cache(user_file_path)
+            cache_handler.save_from_cache(user_file_path)
         except IOError:
             raise_save_error(user_file_path)
         else:
@@ -178,7 +203,7 @@ class VideoEditorWindow(QWidget):
             get_success_message(user_file_path)
 
     def merge_with(self):
-        if self.cache_handler.current_index == 0:
+        if cache_handler.current_index == 0:
             raise_no_file_error()
             return
 
@@ -187,22 +212,26 @@ class VideoEditorWindow(QWidget):
         if len(user_file_paths) == 0:
             return
 
-        file_paths = [self.cache_handler.get_current_path_to_look()]
+        file_paths = [cache_handler.get_current_path_to_look()]
         file_paths.extend(user_file_paths)
 
         try:
+            cache_handler.prepare_cache_folder(
+                cache_handler.current_index + 1
+            )
+
             merge_videos_and_save(
-                file_paths, self.cache_handler.get_current_path_to_save()
+                file_paths, cache_handler.get_current_path_to_save()
             )
         except IOError as e:
             raise_open_error(e.__str__())
         else:
-            self.cache_handler.update_current_index(OperationType.INCREASE)
+            cache_handler.update_current_index(OperationType.INCREASE)
             self.have_unsaved_changes = True
             self._play_resulting_video()
 
     def trim(self):
-        if self.cache_handler.current_index == 0:
+        if cache_handler.current_index == 0:
             raise_no_file_error()
             return
 
@@ -218,21 +247,25 @@ class VideoEditorWindow(QWidget):
         end_time = (end.minute(), end.second())
 
         try:
+            cache_handler.prepare_cache_folder(
+                cache_handler.current_index + 1
+            )
+
             trim_and_save_video(
-                self.cache_handler.get_current_path_to_look(),
+                cache_handler.get_current_path_to_look(),
                 start_time,
                 end_time,
-                self.cache_handler.get_current_path_to_save()
+                cache_handler.get_current_path_to_save()
             )
         except RuntimeError:
             raise_wrong_time_error()
         else:
-            self.cache_handler.update_current_index(OperationType.INCREASE)
+            cache_handler.update_current_index(OperationType.INCREASE)
             self.have_unsaved_changes = True
             self._play_resulting_video()
 
     def set_speed(self):
-        if self.cache_handler.current_index == 0:
+        if cache_handler.current_index == 0:
             raise_no_file_error()
             return
 
@@ -242,15 +275,19 @@ class VideoEditorWindow(QWidget):
             return
 
         try:
+            cache_handler.prepare_cache_folder(
+                cache_handler.current_index + 1
+            )
+
             set_video_speed_and_save(
-                self.cache_handler.get_current_path_to_look(),
+                cache_handler.get_current_path_to_look(),
                 speed,
-                self.cache_handler.get_current_path_to_save()
+                cache_handler.get_current_path_to_save()
             )
         except (ZeroDivisionError, ValueError):
             raise_wrong_speed_error()
         else:
-            self.cache_handler.update_current_index(OperationType.INCREASE)
+            cache_handler.update_current_index(OperationType.INCREASE)
             self.have_unsaved_changes = True
             self._play_resulting_video()
 
@@ -288,10 +325,11 @@ class VideoEditorWindow(QWidget):
     def closeEvent(self, event):
         need_to_close_window = True
         if self.have_unsaved_changes:
-            need_to_close_window = run_close_event_dialog_window()
+            text = "You have unsaved changes.\nAre you sure you want to exit?"
+            need_to_close_window = run_ask_confirmation_dialog_window(text)
 
         if need_to_close_window:
-            self.cache_handler.clear_cache()
+            cache_handler.clear_cache()
             event.accept()
         else:
             event.ignore()

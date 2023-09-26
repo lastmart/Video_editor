@@ -40,6 +40,11 @@ def raise_nothing_to_undo_error():
     get_base_message(text, MessageType.ERROR)
 
 
+def raise_nothing_to_redo_error():
+    text = "There's nothing to redo here"
+    get_base_message(text, MessageType.ERROR)
+
+
 def raise_cache_error(file_path):
     text = f"""An error occurred while clearing the cache.
     Please clear it manually. Problem with path: 

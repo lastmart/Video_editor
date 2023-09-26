@@ -134,15 +134,7 @@ def run_set_speed_dialog_window() -> QTime:
         return None
 
 
-def run_close_event_dialog_window() -> bool:
-    text = "You have unsaved changes.\nAre you sure you want to exit?"
-    window = AskConfirmationDialogWindow(text)
-    window.show()
-    return True if window.exec() == QDialog.DialogCode.Accepted else False
-
-
-def run_undo_dialog_window() -> bool:
-    text = "Are you sure you want to undo last action?"
+def run_ask_confirmation_dialog_window(text: str) -> bool:
     window = AskConfirmationDialogWindow(text)
     window.show()
     return True if window.exec() == QDialog.DialogCode.Accepted else False

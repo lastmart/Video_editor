@@ -56,16 +56,21 @@ class CacheHandler:
         if self.current_index == 1 or self.current_index == 0:
             raise FileNotFoundError
 
-        self._remove_video(self.current_index)
         self.update_current_index(OperationType.DECREASE)
 
-    def prepare_cache_folder(self) -> None:
+    def redo(self) -> None:
+        if os.path.exists(self.get_current_path_to_save()):
+            self.update_current_index(OperationType.INCREASE)
+        else:
+            raise FileNotFoundError
+
+    def prepare_cache_folder(self, start_index=1) -> None:
         """If the program was terminated incorrectly, the
         cache may not be empty. This method clears the cache
         in a special way before starting work with it
         """
 
-        index = 1
+        index = start_index
 
         while True:
             current_path_to_remove = str(
@@ -112,3 +117,6 @@ class CacheHandler:
             )
 
         return Path(base_path_to_save)
+
+
+cache_handler = CacheHandler()

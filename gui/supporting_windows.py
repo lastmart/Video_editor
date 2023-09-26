@@ -4,7 +4,7 @@ from PyQt6.QtWidgets import \
 from PyQt6.QtCore import QTime, QLocale
 from .constructor import \
     get_text_label, get_choice_button, \
-    get_filename_button, get_speed_edit_widgets, get_time_edit_widgets
+    get_filename_button, get_speed_edit_widgets, get_time_edit_widgets, get_speed_edit_layout, get_time_edit_layout
 from .utils import process_time, get_open_file_names
 
 
@@ -25,16 +25,17 @@ class TrimDialogWindow(QDialog):
             get_time_edit_widgets(self, current_time)
         choice_button = get_choice_button(self)
 
-        self._set_up_layouts(choice_button, end_text, main_text, start_text)
+        self._set_up_layouts(main_text, start_text, end_text, choice_button)
 
-    def _set_up_layouts(self, choice_button, end_text, main_text, start_text):
-        start_layout = QHBoxLayout()
-        start_layout.addWidget(start_text)
-        start_layout.addWidget(self.start_edit)
-
-        end_layout = QHBoxLayout()
-        end_layout.addWidget(end_text)
-        end_layout.addWidget(self.end_edit)
+    def _set_up_layouts(
+        self,
+        main_text,
+        start_text,
+        end_text,
+        choice_button
+    ) -> None:
+        start_layout = get_time_edit_layout(start_text, self.start_edit)
+        end_layout = get_time_edit_layout(end_text, self.end_edit)
 
         main_layout = QVBoxLayout()
         main_layout.addWidget(main_text)
@@ -58,30 +59,24 @@ class SetSpeedDialogWindow(QDialog):
         main_text = get_text_label(
             self, "Set new video speed:"
         )
-        postfix_text = get_text_label(self, "X")
 
         self.speed_edit = get_speed_edit_widgets(self)
         choice_button = get_choice_button(self)
 
         self._set_up_layouts(
             main_text,
-            postfix_text,
             choice_button
         )
 
     def _set_up_layouts(
         self,
         main_text,
-        postfix_text,
         choice_button
     ):
-        time_edit_layout = QHBoxLayout()
-        time_edit_layout.addWidget(main_text)
-        time_edit_layout.addWidget(self.speed_edit)
-        time_edit_layout.addWidget(postfix_text)
+        speed_edit_layout = get_speed_edit_layout(main_text, self.speed_edit)
 
         main_layout = QVBoxLayout()
-        main_layout.addLayout(time_edit_layout)
+        main_layout.addLayout(speed_edit_layout)
         main_layout.addWidget(choice_button)
 
         self.setLayout(main_layout)
@@ -116,7 +111,6 @@ class SetPartialSpeedDialogWindow(QDialog):
             start_text,
             end_text,
             speed_text,
-            postfix_text,
             choice_button
         )
 
@@ -126,28 +120,18 @@ class SetPartialSpeedDialogWindow(QDialog):
         start_text,
         end_text,
         speed_text,
-        postfix_text,
         choice_button
     ):
-        start_layout = QHBoxLayout()
-        start_layout.addWidget(start_text)
-        start_layout.addWidget(self.start_edit)
-
-        end_layout = QHBoxLayout()
-        end_layout.addWidget(end_text)
-        end_layout.addWidget(self.end_edit)
-
-        time_edit_layout = QHBoxLayout()
-        time_edit_layout.addWidget(speed_text)
-        time_edit_layout.addWidget(self.speed_edit)
-        time_edit_layout.addWidget(postfix_text)
+        start_layout = get_time_edit_layout(start_text, self.start_edit)
+        end_layout = get_time_edit_layout(end_text, self.end_edit)
+        speed_edit_layout = get_speed_edit_layout(speed_text, self.speed_edit)
 
         main_layout = QVBoxLayout()
         main_layout.addWidget(time_text)
         main_layout.addLayout(start_layout)
         main_layout.addLayout(end_layout)
         main_layout.addWidget(speed_text)
-        main_layout.addLayout(time_edit_layout)
+        main_layout.addLayout(speed_edit_layout)
         main_layout.addWidget(choice_button)
 
         self.setLayout(main_layout)
@@ -192,7 +176,7 @@ class MergeIntoDialogWindow(QDialog):
             self, "Select the time at which the merge will be performed"
         )
 
-        self._set_up_time_edit_widgets(current_time)
+        self.time_edit = get_time_edit_widgets(self, current_time)[1]
         choice_button = get_choice_button(self)
         filename_button = get_filename_button(
             self,
@@ -201,18 +185,11 @@ class MergeIntoDialogWindow(QDialog):
 
         self._set_up_layouts(choice_button, filename_button, main_text)
 
-    def _set_up_time_edit_widgets(self, current_time):
-        self.time_edit = QtWidgets.QTimeEdit(self)
-        self.time_edit.setDisplayFormat("mm:ss")
-        self.time_edit.setTime(QTime(*process_time(current_time)))
-
     def _set_up_layouts(self, choice_button, filename_button, main_text):
-        time_layout = QHBoxLayout()
-        time_layout.addWidget(main_text)
-        time_layout.addWidget(self.time_edit)
+        time_edit_layout = get_time_edit_layout(main_text, self.time_edit)
 
         main_layout = QVBoxLayout()
-        main_layout.addLayout(time_layout)
+        main_layout.addLayout(time_edit_layout)
         main_layout.addWidget(filename_button)
         main_layout.addWidget(choice_button)
 

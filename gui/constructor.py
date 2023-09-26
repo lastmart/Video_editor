@@ -2,7 +2,7 @@ from PyQt6 import QtWidgets
 from PyQt6.QtCore import QLocale, QTime
 from PyQt6.QtWidgets import \
     QStyle, QLabel, QDialog, QDialogButtonBox, QWidget, QPushButton, \
-    QDoubleSpinBox
+    QDoubleSpinBox, QHBoxLayout
 from typing import Union
 from .utils import process_time
 
@@ -67,3 +67,27 @@ def get_time_edit_widgets(
     end_edit.setTime(QTime(*process_time(current_time)))
 
     return start_edit, end_edit
+
+
+def get_speed_edit_layout(
+    speed_text: str,
+    speed_edit: QDoubleSpinBox,
+    postfix_text="X"
+) -> QHBoxLayout:
+    speed_edit_layout = QHBoxLayout()
+    speed_edit_layout.addWidget(speed_text)
+    speed_edit_layout.addWidget(speed_edit)
+    speed_edit_layout.addWidget(postfix_text)
+
+    return speed_edit_layout
+
+
+def get_time_edit_layout(
+    text: str,
+    time_edit: QtWidgets.QTimeEdit
+) -> QHBoxLayout:
+    time_edit_layout = QHBoxLayout()
+    time_edit_layout.addWidget(text)
+    time_edit_layout.addWidget(time_edit)
+
+    return time_edit_layout

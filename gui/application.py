@@ -10,7 +10,7 @@ from VideoEditor.video_editor import \
     set_video_speed_and_save, copy_video
 from .supporting_windows import \
     run_trim_dialog_window, run_set_speed_dialog_window, \
-    run_ask_confirmation_dialog_window, run_merge_into_dialog_window
+    run_ask_confirmation_dialog_window, run_merge_into_dialog_window, run_set_partial_speed_dialog_window
 from .cache_handler import cache_handler
 from .utils import \
     OperationType, OperationSystem, OS_TYPE, get_open_file_name, \
@@ -336,7 +336,7 @@ class VideoEditorWindow(QWidget):
             self._play_resulting_video()
 
     def set_partial_speed(self):
-        pass
+        print(run_set_partial_speed_dialog_window(self.video_slider.value()))
 
     def _process_media_status_changed(self, status: QMediaPlayer.MediaStatus):
         if status == QMediaPlayer.MediaStatus.EndOfMedia:

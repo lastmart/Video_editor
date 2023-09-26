@@ -3,7 +3,8 @@ from PyQt6.QtWidgets import \
     QDialog, QVBoxLayout, QHBoxLayout, QDoubleSpinBox
 from PyQt6.QtCore import QTime, QLocale
 from .constructor import \
-    get_text_label, get_choice_button, get_filename_button
+    get_text_label, get_choice_button, \
+    get_filename_button, get_speed_edit_widgets, get_time_edit_widgets
 from .utils import process_time, get_open_file_names
 
 
@@ -20,19 +21,11 @@ class TrimDialogWindow(QDialog):
         start_text = get_text_label(self, "start time")
         end_text = get_text_label(self, "end time")
 
-        self._set_up_time_edit_widgets(current_time)
+        self.start_edit, self.end_edit = \
+            get_time_edit_widgets(self, current_time)
         choice_button = get_choice_button(self)
 
         self._set_up_layouts(choice_button, end_text, main_text, start_text)
-
-    def _set_up_time_edit_widgets(self, current_time):
-        self.start_edit = QtWidgets.QTimeEdit(self)
-        self.start_edit.setDisplayFormat("mm:ss")
-        self.start_edit.setTime(QTime(0, 0, 0, 0))
-
-        self.end_edit = QtWidgets.QTimeEdit(self)
-        self.end_edit.setDisplayFormat("mm:ss")
-        self.end_edit.setTime(QTime(*process_time(current_time)))
 
     def _set_up_layouts(self, choice_button, end_text, main_text, start_text):
         start_layout = QHBoxLayout()
@@ -67,18 +60,21 @@ class SetSpeedDialogWindow(QDialog):
         )
         postfix_text = get_text_label(self, "X")
 
-        self._set_up_time_edit_widgets()
+        self.speed_edit = get_speed_edit_widgets(self)
         choice_button = get_choice_button(self)
 
-        self._set_up_layouts(main_text, postfix_text, choice_button)
+        self._set_up_layouts(
+            main_text,
+            postfix_text,
+            choice_button
+        )
 
-    def _set_up_time_edit_widgets(self):
-        self.speed_edit = QDoubleSpinBox(self)
-        self.speed_edit.setDecimals(1)
-        self.speed_edit.setValue(1.0)
-        self.speed_edit.setLocale(QLocale("C"))
-
-    def _set_up_layouts(self, main_text, postfix_text, choice_button):
+    def _set_up_layouts(
+        self,
+        main_text,
+        postfix_text,
+        choice_button
+    ):
         time_edit_layout = QHBoxLayout()
         time_edit_layout.addWidget(main_text)
         time_edit_layout.addWidget(self.speed_edit)
@@ -92,6 +88,74 @@ class SetSpeedDialogWindow(QDialog):
 
     def get_speed(self) -> QTime:
         return self.speed_edit.value()
+
+
+class SetPartialSpeedDialogWindow(QDialog):
+    def __init__(self, current_time: int):
+        super().__init__()
+
+        self.setWindowTitle("set speed dialog")
+        self.setMinimumWidth(250)
+
+        time_text = get_text_label(self, "Select video fragment")
+        start_text = get_text_label(self, "start time")
+        end_text = get_text_label(self, "end time")
+
+        speed_text = get_text_label(
+            self, "Set new speed for fragment:"
+        )
+        postfix_text = get_text_label(self, "X")
+
+        self.start_edit, self.end_edit = \
+            get_time_edit_widgets(self, current_time)
+        self.speed_edit = get_speed_edit_widgets(self)
+        choice_button = get_choice_button(self)
+
+        self._set_up_layouts(
+            time_text,
+            start_text,
+            end_text,
+            speed_text,
+            postfix_text,
+            choice_button
+        )
+
+    def _set_up_layouts(
+        self,
+        time_text,
+        start_text,
+        end_text,
+        speed_text,
+        postfix_text,
+        choice_button
+    ):
+        start_layout = QHBoxLayout()
+        start_layout.addWidget(start_text)
+        start_layout.addWidget(self.start_edit)
+
+        end_layout = QHBoxLayout()
+        end_layout.addWidget(end_text)
+        end_layout.addWidget(self.end_edit)
+
+        time_edit_layout = QHBoxLayout()
+        time_edit_layout.addWidget(speed_text)
+        time_edit_layout.addWidget(self.speed_edit)
+        time_edit_layout.addWidget(postfix_text)
+
+        main_layout = QVBoxLayout()
+        main_layout.addWidget(time_text)
+        main_layout.addLayout(start_layout)
+        main_layout.addLayout(end_layout)
+        main_layout.addWidget(speed_text)
+        main_layout.addLayout(time_edit_layout)
+        main_layout.addWidget(choice_button)
+
+        self.setLayout(main_layout)
+
+    def get_set_speed_information(self) -> tuple[QTime, QTime, QTime]:
+        return self.start_edit.time(), \
+               self.end_edit.time(), \
+               self.speed_edit.value()
 
 
 class AskConfirmationDialogWindow(QDialog):
@@ -184,6 +248,15 @@ def run_set_speed_dialog_window() -> QTime:
     window.show()
     if window.exec() == QDialog.DialogCode.Accepted:
         return window.get_speed()
+    else:
+        return None
+
+
+def run_set_partial_speed_dialog_window(current_time: int) -> QTime:
+    window = SetPartialSpeedDialogWindow(current_time)
+    window.show()
+    if window.exec() == QDialog.DialogCode.Accepted:
+        return window.get_set_speed_information()
     else:
         return None
 

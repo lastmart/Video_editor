@@ -1,7 +1,10 @@
 from PyQt6 import QtWidgets
+from PyQt6.QtCore import QLocale, QTime
 from PyQt6.QtWidgets import \
-    QStyle, QLabel, QDialog, QDialogButtonBox, QWidget, QPushButton
+    QStyle, QLabel, QDialog, QDialogButtonBox, QWidget, QPushButton, \
+    QDoubleSpinBox
 from typing import Union
+from .utils import process_time
 
 
 def get_volume_icon(obj: QWidget) -> QLabel:
@@ -40,3 +43,27 @@ def get_filename_button(obj: QDialog, func: callable) -> QPushButton:
     button.clicked.connect(func)
 
     return button
+
+
+def get_speed_edit_widgets(obj: QDialog) -> QDoubleSpinBox:
+    speed_edit = QDoubleSpinBox(obj)
+    speed_edit.setDecimals(1)
+    speed_edit.setValue(1.0)
+    speed_edit.setLocale(QLocale("C"))
+
+    return speed_edit
+
+
+def get_time_edit_widgets(
+    obj: QDialog,
+    current_time: int
+) -> tuple[QtWidgets.QTimeEdit, QtWidgets.QTimeEdit]:
+    start_edit = QtWidgets.QTimeEdit(obj)
+    start_edit.setDisplayFormat("mm:ss")
+    start_edit.setTime(QTime(0, 0, 0, 0))
+
+    end_edit = QtWidgets.QTimeEdit(obj)
+    end_edit.setDisplayFormat("mm:ss")
+    end_edit.setTime(QTime(*process_time(current_time)))
+
+    return start_edit, end_edit

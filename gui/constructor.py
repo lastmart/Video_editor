@@ -58,32 +58,38 @@ def get_time_edit_widgets(
     obj: QDialog,
     current_time: int
 ) -> tuple[QtWidgets.QTimeEdit, QtWidgets.QTimeEdit]:
-    start_edit = QtWidgets.QTimeEdit(obj)
-    start_edit.setDisplayFormat("mm:ss")
-    start_edit.setTime(QTime(0, 0, 0, 0))
-
-    end_edit = QtWidgets.QTimeEdit(obj)
-    end_edit.setDisplayFormat("mm:ss")
-    end_edit.setTime(QTime(*process_time(current_time)))
+    start_edit = get_time_edit_widget(obj, 0)
+    end_edit = get_time_edit_widget(obj, current_time)
 
     return start_edit, end_edit
 
 
+def get_time_edit_widget(
+    obj: QDialog,
+    current_time: int
+) -> QtWidgets.QTimeEdit:
+    time_edit = QtWidgets.QTimeEdit(obj)
+    time_edit.setDisplayFormat("mm:ss")
+    time_edit.setTime(QTime(*process_time(current_time)))
+
+    return time_edit
+
+
 def get_speed_edit_layout(
-    speed_text: str,
+    obj: QDialog,
+    speed_text: QtWidgets.QLabel,
     speed_edit: QDoubleSpinBox,
-    postfix_text="X"
 ) -> QHBoxLayout:
     speed_edit_layout = QHBoxLayout()
     speed_edit_layout.addWidget(speed_text)
     speed_edit_layout.addWidget(speed_edit)
-    speed_edit_layout.addWidget(postfix_text)
+    speed_edit_layout.addWidget(get_text_label(obj, "X"))
 
     return speed_edit_layout
 
 
 def get_time_edit_layout(
-    text: str,
+    text: QtWidgets.QLabel,
     time_edit: QtWidgets.QTimeEdit
 ) -> QHBoxLayout:
     time_edit_layout = QHBoxLayout()

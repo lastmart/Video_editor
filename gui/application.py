@@ -265,7 +265,6 @@ class VideoEditorWindow(QWidget):
     def cut_out(self):
         main_text = "Select the fragment that will be deleted:"
         # TODO
-        pass
         self._base_cut(main_text, trim_and_save_video)
 
     def _base_cut(self,

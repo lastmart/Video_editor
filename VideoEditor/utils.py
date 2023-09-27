@@ -23,7 +23,7 @@ def check_paths_correctness(paths: Union[str, list[str]],
                              .format(e, ", ".join(possible_formats)))
 
 
-def convert_date_to_seconds(date: Union[Iterable, str]) -> int:
+def convert_time_to_seconds(date: Union[Iterable, str]) -> int:
     if isinstance(date, str):
         try:
             sep_date = date.split(':')
@@ -96,15 +96,15 @@ def get_video_duration(file: Union[str, ffmpeg.nodes.Node]) -> float:
         file = file.kwargs['filename']
     try:
         probe = ffmpeg.probe(file)
+        video_duration = float(probe['format']['duration'])
     except TypeError as e:
         raise TypeError('You can not get duration of {}'.format(type(file))) from e
     except ffmpeg.Error as e:
         print(e.stderr.decode(), file=sys.stderr)
         raise e
-    try:
-        return float(probe['format']['duration'])
     except KeyError:
-        return 0
+        video_duration = 0
+    return video_duration
 
 
 def get_information_about_stream(file: Union[str, ffmpeg.nodes.Node],
@@ -124,3 +124,17 @@ def get_information_about_stream(file: Union[str, ffmpeg.nodes.Node],
         raise FileNotFoundError('No {} stream found in\n {}'
                                 .format(stream_name, file))
     return video_stream
+
+
+def get_video_parameters(path_to_video: str,
+                         width: int = None,
+                         height: int = None,
+                         sar: str = None,
+                         fps: int = None,
+                         ) -> tuple[int, int, int, str]:
+    video_information = get_information_about_stream(path_to_video, 'video')
+    width = video_information['width'] if width is None else width
+    height = video_information['height'] if height is None else height
+    fps = convert_ratio_to_int(video_information['avg_frame_rate']) if fps is None else fps
+    sar = video_information.get('sample_aspect_ratio', '1/1') if sar is None else sar
+    return width, height, fps, sar

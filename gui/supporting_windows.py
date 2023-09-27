@@ -1,13 +1,15 @@
 from PyQt6 import QtWidgets
+from PyQt6.QtGui import QMouseEvent, QWindow
 from PyQt6.QtWidgets import \
-    QDialog, QVBoxLayout, QHBoxLayout, QDoubleSpinBox
-from PyQt6.QtCore import QTime, QLocale
+    QDialog, QVBoxLayout, QHBoxLayout, QDoubleSpinBox, QMainWindow, QWidget
+from PyQt6.QtCore import QTime, QLocale, QEvent, Qt
 from .constructor import \
     get_text_label, get_choice_button, \
     get_filename_button, get_speed_edit_widgets, get_time_edit_widgets, \
-    get_speed_edit_layout, get_time_edit_layout, get_time_edit_widget
+    get_speed_edit_layout, get_time_edit_layout, get_time_edit_widget, \
+    get_point_edit_layout
 from .utils import process_time, get_open_file_names
-from .my_dialog_window import MyDialogWindow
+from .qt_extension import MyDialogWindow
 
 
 class TrimDialogWindow(MyDialogWindow):
@@ -185,6 +187,52 @@ class MergeIntoDialogWindow(MyDialogWindow):
         return self.time_edit.time(), self.filenames
 
 
+class OverlayDialogWindow(MyDialogWindow):
+    def __init__(self):
+        super().__init__("overlay dialog window", have_choice_button=False)
+        self.filenames = None
+
+        main_text = get_text_label(
+            self,
+            "Select the position of the upper left corner "
+            "of the media using the cursor.\n"
+            "To do this, move the cursor to the desired "
+            "location in the main window and click"
+        )
+
+        self.x_edit = get_speed_edit_widgets(self)
+        self.y_edit = get_speed_edit_widgets(self)
+
+        self.filename_button = get_filename_button(
+            self,
+            self._get_open_filenames_wrapper
+        )
+
+        self._set_up_layouts(main_text)
+        self.installEventFilter(self)
+
+    def _set_up_layouts(self, main_text):
+        point_edit_layout = get_point_edit_layout(
+            self, self.x_edit, self.y_edit
+        )
+
+        main_layout = QVBoxLayout()
+        main_layout.addWidget(main_text)
+        main_layout.addLayout(point_edit_layout)
+        main_layout.addWidget(self.filename_button)
+
+        self.setLayout(main_layout)
+
+    def _get_open_filenames_wrapper(self) -> None:
+        self.filenames = get_open_file_names(self)
+        self.filename_button.setText("The files were selected")
+        self.filename_button.setEnabled(False)
+        self.done(1)
+
+    def get_result(self) -> tuple[QTime, list[str]]:
+        pass
+
+
 def run_trim_dialog_window(current_time: int, main_text: str) -> list:
     window = TrimDialogWindow(current_time, main_text)
     return window.execute()
@@ -202,6 +250,11 @@ def run_set_speed_dialog_window() -> QTime:
 
 def run_set_partial_speed_dialog_window(current_time: int) -> QTime:
     window = SetPartialSpeedDialogWindow(current_time)
+    return window.execute()
+
+
+def run_overlay_dialog_window(obj: QWidget):
+    window = OverlayDialogWindow(obj)
     return window.execute()
 
 

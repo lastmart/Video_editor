@@ -1,5 +1,6 @@
 import sys
 from PyQt6.QtCore import Qt, QUrl
+from PyQt6.QtGui import QMouseEvent
 from PyQt6.QtWidgets import \
     QApplication, QWidget, QVBoxLayout, QPushButton, QSlider, \
     QStyle, QHBoxLayout, QMenu, QMenuBar, QSpacerItem, QSizePolicy
@@ -10,12 +11,13 @@ from VideoEditor.video_editor import \
     set_video_speed_and_save, copy_video
 from .supporting_windows import \
     run_trim_dialog_window, run_set_speed_dialog_window, \
-    run_ask_confirmation_dialog_window, run_merge_into_dialog_window, run_set_partial_speed_dialog_window
+    run_ask_confirmation_dialog_window, run_merge_into_dialog_window, run_set_partial_speed_dialog_window, run_overlay_dialog_window
 from .cache_handler import cache_handler
 from .utils import \
     OperationType, OperationSystem, OS_TYPE, get_open_file_name, \
     get_open_file_names, get_save_file_name, process_time
 from .constructor import get_volume_icon, get_text_label
+from .qt_extension import MyVideoWidgets
 from .message import *
 
 
@@ -27,7 +29,7 @@ class VideoEditorWindow(QWidget):
         self.setGeometry(100, 100, 900, 600)
 
         self.media_player = QMediaPlayer(None)
-        self.video_widget = QVideoWidget()
+        self.video_widget = MyVideoWidgets()
         self.audio_output = QAudioOutput()
 
         self._set_up_play_button()
@@ -73,6 +75,7 @@ class VideoEditorWindow(QWidget):
         tools_submenu.addAction("Merge with", self.merge_with)
         tools_submenu.addAction("Trim", self.trim)
         tools_submenu.addAction("Set speed", self.set_speed)
+        tools_submenu.addAction("Overlay", self.overlay)
 
         partial_tools_submenu = QMenu("&Partial tools", self)
         edit_menu.addMenu(partial_tools_submenu)
@@ -336,6 +339,9 @@ class VideoEditorWindow(QWidget):
 
     def set_partial_speed(self):
         print(run_set_partial_speed_dialog_window(self.video_slider.value()))
+
+    def overlay(self):
+        print(run_overlay_dialog_window(self))
 
     def _process_media_status_changed(self, status: QMediaPlayer.MediaStatus):
         if status == QMediaPlayer.MediaStatus.EndOfMedia:

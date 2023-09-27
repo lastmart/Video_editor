@@ -97,3 +97,17 @@ def get_time_edit_layout(
     time_edit_layout.addWidget(time_edit)
 
     return time_edit_layout
+
+
+def get_point_edit_layout(
+    obj: QDialog,
+    x_edit: QDoubleSpinBox,
+    y_edit: QDoubleSpinBox
+) -> QHBoxLayout:
+    point_edit_layout = QHBoxLayout()
+    point_edit_layout.addWidget(get_text_label(obj, "x:"))
+    point_edit_layout.addWidget(x_edit)
+    point_edit_layout.addWidget(get_text_label(obj, "y:"))
+    point_edit_layout.addWidget(y_edit)
+
+    return point_edit_layout

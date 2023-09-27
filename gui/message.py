@@ -40,6 +40,11 @@ def raise_nothing_to_undo_error():
     get_base_message(text, MessageType.ERROR)
 
 
+def raise_nothing_to_redo_error():
+    text = "There's nothing to redo here"
+    get_base_message(text, MessageType.ERROR)
+
+
 def raise_cache_error(file_path):
     text = f"""An error occurred while clearing the cache.
     Please clear it manually. Problem with path: 
@@ -47,8 +52,13 @@ def raise_cache_error(file_path):
     get_base_message(text, MessageType.ERROR)
 
 
-def get_success_message(file_path):
+def get_success_save_message(file_path):
     text = f"The file was successfully saved to the path:\n'{file_path}'"
+    get_base_message(text, MessageType.SUCCESS)
+
+
+def get_success_clear_cache_message():
+    text = "The history cleared successfully"
     get_base_message(text, MessageType.SUCCESS)
 
 

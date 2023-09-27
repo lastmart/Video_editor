@@ -1,5 +1,5 @@
 from __future__ import unicode_literals, print_function
-from .utils import convert_date_to_seconds
+from .utils import convert_time_to_seconds
 import PySimpleGUI as sg
 from tqdm import tqdm
 from math import ceil

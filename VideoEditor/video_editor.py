@@ -2,7 +2,7 @@ from .utils import \
     (check_paths_correctness, convert_ratio_to_int, scale_frame_in_bounds,
      get_video_duration, get_information_about_stream, get_video_parameters,
      Usage)
-from progress_bar import \
+from .progress_bar import \
     show_progress_in_console, show_progress_in_gui
 from collections import namedtuple
 from PyQt6.QtCore import QTime

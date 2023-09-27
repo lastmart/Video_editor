@@ -3,12 +3,14 @@ from gui.constructor import get_choice_button
 
 
 class MyDialogWindow(QDialog):
-    def __init__(self, title: str):
+    def __init__(self, title: str, have_choice_button=True):
         super().__init__()
 
         self.setWindowTitle(title)
         self.setMinimumWidth(250)
-        self.choice_button = get_choice_button(self)
+
+        if have_choice_button:
+            self.choice_button = get_choice_button(self)
 
     def get_result(self):
         pass

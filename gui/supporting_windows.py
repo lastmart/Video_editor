@@ -151,7 +151,7 @@ class AskConfirmationDialogWindow(QDialog):
 
 class MergeIntoDialogWindow(MyDialogWindow):
     def __init__(self, current_time: int):
-        super().__init__("merge into dialog")
+        super().__init__("merge into dialog", have_choice_button=False)
         self.filenames = None
 
         main_text = get_text_label(
@@ -172,7 +172,6 @@ class MergeIntoDialogWindow(MyDialogWindow):
         main_layout = QVBoxLayout()
         main_layout.addLayout(time_edit_layout)
         main_layout.addWidget(self.filename_button)
-        main_layout.addWidget(self.choice_button)
 
         self.setLayout(main_layout)
 

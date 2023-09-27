@@ -80,10 +80,10 @@ def _watch_progress(handler):
 def show_progress_in_console(total_duration: float) -> None:
     """Create a unix-domain socket to watch progress and render tqdm
     progress bar."""
-    with tqdm(total=round(total_duration, 2)) as bar:
+    with tqdm(total=total_duration) as bar:
         def console_handler(key: str, value: str) -> None:
             if key == 'out_time':
-                time = convert_date_to_seconds(value)
+                time = convert_time_to_seconds(value)
                 bar.update(time - bar.n)
             elif key == 'progress' and value == 'end':
                 bar.update(bar.total - bar.n)
@@ -100,7 +100,7 @@ def show_progress_in_gui(total_duration: float) -> None:
 
     def gui_handler(key: str, value: str) -> None:
         if key == 'out_time':
-            time = convert_date_to_seconds(value)
+            time = convert_time_to_seconds(value)
             sg.one_line_progress_meter('Progress bar', time, total_duration)
         elif key == 'progress' and value == 'end':
             sg.one_line_progress_meter('Progress bar', total_duration, total_duration)

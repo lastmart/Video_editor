@@ -14,13 +14,14 @@ class TimeInterval:
     _begin = None
     _end = None
 
-    def __init__(self, start_time: QTime, end_time: QTime):
+    def __init__(self, start_time: Union[QTime, int], end_time: Union[QTime, int]):
         try:
-            self._end = QTime(0, 0).secsTo(end_time)
-            self._begin = QTime(0, 0).secsTo(start_time)
+            self._end = QTime(0, 0).secsTo(end_time) if isinstance(end_time, QTime) else end_time
+            self._begin = QTime(0, 0).secsTo(start_time) if isinstance(start_time, QTime) else start_time
             self._check_interval_correctness()
-        except TypeError as e:
-            raise TypeError("In the values of the boundaries of the TimeInterval not PyQt6.QtCore.QTime") from e
+        except TypeError:
+            raise TypeError("In the values of the boundaries of the TimeInterval not PyQt6.QtCore.QTime or int:\n{}"
+                            .format((type(start_time), type(end_time))))
 
     def get_duration_in_seconds(self) -> int:
         return self.end - self.begin
@@ -273,7 +274,7 @@ def set_video_speed_and_save(
     if speed < 0.5:
         raise ValueError('{} is very small'.format(speed))
     video_duration = get_video_duration(video_path)
-    if video_duration < time_interval.end:
+    if time_interval is not None and video_duration < time_interval.end:
         raise ValueError('Interval to set speed ({}) beyond video duration({})'
                          .format(time_interval.end, video_duration))
     if time_interval is None:
@@ -307,7 +308,7 @@ def set_video_speed(
     audio = (input_video.audio
              .filter('asetpts', '{}*PTS'.format(round(1 / speed, 1)))
              .filter("atempo", speed))
-    return video, audio if raw_format else ffmpeg.concat(video, audio, v=1, a=1).node
+    return (video, audio) if raw_format else ffmpeg.concat(video, audio, v=1, a=1).node
 
 
 def overlay_video_on_another_and_save(
@@ -436,8 +437,8 @@ def save_video(
         with view(duration) as socket_filename:
             (out
              .global_args('-progress', 'unix://{}'.format(socket_filename))
-             .run(overwrite_output=is_overwrite, capture_stdout=True,
-                  capture_stderr=True)
+             .run(overwrite_output=is_overwrite, capture_stdout=mode is Usage.GUI,
+                  capture_stderr=mode is Usage.GUI)
              )
     else:
         out.run(overwrite_output=is_overwrite)

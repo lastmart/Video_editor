@@ -1,8 +1,10 @@
+import asyncio
+from PyQt6.QtCore import pyqtSignal, QRunnable, QThreadPool
 from PyQt6 import QtWidgets
 from PyQt6.QtGui import QMouseEvent, QWindow
 from PyQt6.QtWidgets import \
     QDialog, QVBoxLayout, QHBoxLayout, QDoubleSpinBox, QMainWindow, QWidget
-from PyQt6.QtCore import QTime, QLocale, QEvent, Qt
+from PyQt6.QtCore import QTime, QLocale, QEvent, Qt, QCoreApplication, QObject
 from .constructor import \
     get_text_label, get_choice_button, \
     get_button, get_speed_edit_widgets, get_time_edit_widgets, \
@@ -203,7 +205,7 @@ class OverlayDialogWindow(MyDialogWindowWithCommutator):
             "location in the main window and click"
         )
 
-        self.location_button = get_button(self, "Select location", self.commutator.start)
+        self.location_button = get_button(self, "Select location", self.start_async_task)
         self.filename_button = get_button(
             self,
             "Select file for overlay",
@@ -212,6 +214,16 @@ class OverlayDialogWindow(MyDialogWindowWithCommutator):
 
         self._set_up_layouts(main_text)
         self.installEventFilter(self)
+        self.threadpool = QThreadPool()
+
+    def start_async_task(self):
+        self.location_button.setEnabled(False)
+        worker = MyWorker(self.commutator)
+        worker.signals.finished.connect(self.on_async_task_finished)
+        self.threadpool.start(worker)
+
+    def on_async_task_finished(self):
+        self.location_button.setEnabled(True)
 
     def _set_up_layouts(self, main_text):
         point_edit_layout = get_point_edit_layout(
@@ -242,6 +254,27 @@ class OverlayDialogWindow(MyDialogWindowWithCommutator):
             return self.get_result()
         else:
             return None
+
+
+class WorkerSignals(QObject):
+    finished = pyqtSignal()
+
+
+class MyWorker(QRunnable):
+    def __init__(self, commutator: Commutator):
+        super().__init__()
+        self.signals = WorkerSignals()
+        self.commutator = commutator
+
+    def run(self):
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
+        async def async_task_wrapper():
+            await self.commutator.receive()
+            self.signals.finished.emit()
+
+        loop.run_until_complete(async_task_wrapper())
 
 
 def run_trim_dialog_window(current_time: int, main_text: str) -> list:

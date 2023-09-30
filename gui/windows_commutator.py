@@ -1,4 +1,4 @@
-import gevent
+import asyncio
 from .qt_extensions import MyVideoWidget, MyDialogWindowWithCommutator
 
 
@@ -8,11 +8,13 @@ class Commutator:
         self.receiver = receiver
 
     def start(self):
-        receiver_greenlet = gevent.spawn(self.receive)
-        receiver_greenlet.join()
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(self.receive())
+        loop.close()
 
-    def receive(self):
+    async def receive(self):
         while True:
+            await asyncio.sleep(1)
             position = self.sender.position
             if position is not None:
                 print("Position received:", position)

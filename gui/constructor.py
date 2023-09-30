@@ -75,7 +75,7 @@ def get_speed_edit_widget(obj: QDialog) -> QDoubleSpinBox:
     return speed_edit
 
 
-def get_int_edit_widget(obj: QDialog, is_enabled=False) -> QSpinBox:
+def get_int_edit_widget(obj: QDialog, is_enabled=True) -> QSpinBox:
     int_edit = QSpinBox(obj)
     int_edit.setValue(0)
     int_edit.setMinimum(0)

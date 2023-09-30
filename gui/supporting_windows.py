@@ -195,10 +195,8 @@ class OverlayDialogWindow(MyAsyncDialogWindow):
 
         main_text = get_text_label(
             self,
-            "Select the position of the upper left corner "
-            "of the media using the cursor.\n"
-            "To do this, move the cursor to the desired "
-            "location in the main window and click"
+            "Select the position of the upper left corner\n"
+            "of the overlay media using the cursor"
         )
 
         self.filename_button = get_button(

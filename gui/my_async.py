@@ -22,6 +22,11 @@ class MyAsyncDialogWindow(MyDialogWindow):
         self.location_button = get_button(
             self, "Select location", self.start_async_task
             )
+        tip = (
+            "To do this, move the cursor to the desired "
+            "location in the main window and click"
+        )
+        self.location_button.setToolTip(tip)
 
         self.installEventFilter(self)
 

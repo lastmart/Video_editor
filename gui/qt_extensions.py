@@ -1,8 +1,8 @@
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QThreadPool
 from PyQt6.QtGui import QMouseEvent
 from PyQt6.QtMultimediaWidgets import QVideoWidget
 from PyQt6.QtWidgets import QDialog
-from .constructor import get_choice_button, get_speed_edit_widgets
+from .constructor import get_choice_button, get_speed_edit_widgets, get_button
 
 
 class MyDialogWindow(QDialog):
@@ -26,25 +26,25 @@ class MyDialogWindow(QDialog):
             return None
 
 
-class MyDialogWindowWithCommutator(MyDialogWindow):
-    def __init__(self, title: str, have_choice_button=True):
-        super().__init__(title, have_choice_button)
-
-        self.x_edit = get_speed_edit_widgets(self)
-        self.y_edit = get_speed_edit_widgets(self)
-
-
 class MyVideoWidget(QVideoWidget):
     def __init__(self):
         super().__init__()
+        self._need_to_start_send = False
         self.position = None
+
+    def start_send(self) -> None:
+        self._need_to_start_send = True
+        self.position = None
+
+    def stop_send(self) -> None:
+        self._need_to_start_send = False
 
     def mousePressEvent(self, event: QMouseEvent):
         if event.button() == Qt.MouseButton.LeftButton:
             position = event.position()
 
             print(
-                "Нажатие в главном окне на координаты:",
+                "Clicking on coordinates:",
                 position.x(), position.y()
             )
             self.position = position

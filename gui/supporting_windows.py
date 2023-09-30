@@ -1,9 +1,11 @@
 import asyncio
+from typing import Union
 from PyQt6.QtCore import pyqtSignal, QRunnable, QThreadPool
 from PyQt6 import QtWidgets
 from PyQt6.QtGui import QMouseEvent, QWindow
 from PyQt6.QtWidgets import \
-    QDialog, QVBoxLayout, QHBoxLayout, QDoubleSpinBox, QMainWindow, QWidget
+    QDialog, QVBoxLayout, QHBoxLayout, QDoubleSpinBox, QMainWindow, QWidget, \
+    QPushButton
 from PyQt6.QtCore import QTime, QLocale, QEvent, Qt, QCoreApplication, QObject
 from .constructor import \
     get_text_label, get_choice_button, \
@@ -11,8 +13,8 @@ from .constructor import \
     get_speed_edit_layout, get_time_edit_layout, get_time_edit_widget, \
     get_point_edit_layout
 from .utils import process_time, get_open_file_names
-from .qt_extensions import MyDialogWindow, MyVideoWidget, MyDialogWindowWithCommutator
-from .windows_commutator import Commutator
+from .my_async import MyAsyncDialogWindow
+from .qt_extensions import MyDialogWindow, MyVideoWidget
 
 
 class TrimDialogWindow(MyDialogWindow):
@@ -182,19 +184,15 @@ class MergeIntoDialogWindow(MyDialogWindow):
         self.setLayout(main_layout)
 
     def _get_open_filenames_wrapper(self) -> None:
-        self.filenames = get_open_file_names(self)
-        self.filename_button.setText("The files were selected")
-        self.filename_button.setEnabled(False)
-        self.done(1)
+        get_open_filenames_wrapper(self)
 
     def get_result(self) -> tuple[QTime, list[str]]:
         return self.time_edit.time(), self.filenames
 
 
-class OverlayDialogWindow(MyDialogWindowWithCommutator):
+class OverlayDialogWindow(MyAsyncDialogWindow):
     def __init__(self, sender: MyVideoWidget):
-        super().__init__("overlay dialog window", have_choice_button=False)
-        self.commutator = Commutator(sender, self)
+        super().__init__("overlay dialog window", sender, have_choice_button=False)
         self.filenames = None
 
         main_text = get_text_label(
@@ -205,7 +203,6 @@ class OverlayDialogWindow(MyDialogWindowWithCommutator):
             "location in the main window and click"
         )
 
-        self.location_button = get_button(self, "Select location", self.start_async_task)
         self.filename_button = get_button(
             self,
             "Select file for overlay",
@@ -213,17 +210,6 @@ class OverlayDialogWindow(MyDialogWindowWithCommutator):
         )
 
         self._set_up_layouts(main_text)
-        self.installEventFilter(self)
-        self.threadpool = QThreadPool()
-
-    def start_async_task(self):
-        self.location_button.setEnabled(False)
-        worker = MyWorker(self.commutator)
-        worker.signals.finished.connect(self.on_async_task_finished)
-        self.threadpool.start(worker)
-
-    def on_async_task_finished(self):
-        self.location_button.setEnabled(True)
 
     def _set_up_layouts(self, main_text):
         point_edit_layout = get_point_edit_layout(
@@ -239,42 +225,18 @@ class OverlayDialogWindow(MyDialogWindowWithCommutator):
         self.setLayout(main_layout)
 
     def _get_open_filenames_wrapper(self) -> None:
-        self.filenames = get_open_file_names(self)
-        self.filename_button.setText("The files were selected")
-        self.filename_button.setEnabled(False)
-        self.done(1)
+        # TODO
+        get_open_filenames_wrapper(self)
 
     def get_result(self) -> tuple[QTime, list[str]]:
         pass
 
-    def execute(self) -> tuple:
-        self.show()
-        if self.exec() == QDialog.DialogCode.Accepted:
-            self.commutator.exit = True
-            return self.get_result()
-        else:
-            return None
 
-
-class WorkerSignals(QObject):
-    finished = pyqtSignal()
-
-
-class MyWorker(QRunnable):
-    def __init__(self, commutator: Commutator):
-        super().__init__()
-        self.signals = WorkerSignals()
-        self.commutator = commutator
-
-    def run(self):
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-
-        async def async_task_wrapper():
-            await self.commutator.receive()
-            self.signals.finished.emit()
-
-        loop.run_until_complete(async_task_wrapper())
+def get_open_filenames_wrapper(obj: Union[OverlayDialogWindow, TrimDialogWindow]) -> None:
+    obj.filenames = get_open_file_names(obj)
+    obj.filename_button.setText("The files were selected")
+    obj.filename_button.setEnabled(False)
+    obj.done(1)
 
 
 def run_trim_dialog_window(current_time: int, main_text: str) -> list:

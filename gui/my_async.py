@@ -2,18 +2,22 @@ import asyncio
 from PyQt6.QtCore import QObject, pyqtSignal, QRunnable
 from PyQt6.QtCore import QThreadPool
 from PyQt6.QtWidgets import QPushButton
-from gui.constructor import get_speed_edit_widgets, get_button
-from gui.qt_extensions import MyDialogWindow, MyVideoWidget
+from .constructor import get_button, get_point_edit_widget
+from .qt_extensions import MyDialogWindow, MyVideoWidget
 
 
 class MyAsyncDialogWindow(MyDialogWindow):
-    def __init__(self, title: str, sender: MyVideoWidget, have_choice_button=True):
+    def __init__(
+        self,
+        title: str,
+        sender: MyVideoWidget,
+        have_choice_button=True
+    ):
         super().__init__(title, have_choice_button)
         self.sender = sender
         self.threadpool = QThreadPool()
 
-        self.x_edit = get_speed_edit_widgets(self)
-        self.y_edit = get_speed_edit_widgets(self)
+        self.x_edit, self.y_edit = get_point_edit_widget(self)
 
         self.location_button = get_button(
             self, "Select location", self.start_async_task
@@ -63,8 +67,8 @@ class AsyncCommutator(QRunnable):
             position = self.sender.position
             if position is not None:
                 print("Position received:", position)
-                self.receiver.x_edit.setValue(position.x())
-                self.receiver.y_edit.setValue(position.y())
+                self.receiver.x_edit.setValue(int(position.x()))
+                self.receiver.y_edit.setValue(int(position.y()))
                 break
 
         self.sender.stop_send()

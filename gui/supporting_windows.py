@@ -1,20 +1,14 @@
-import asyncio
 from typing import Union
-from PyQt6.QtCore import pyqtSignal, QRunnable, QThreadPool
-from PyQt6 import QtWidgets
-from PyQt6.QtGui import QMouseEvent, QWindow
-from PyQt6.QtWidgets import \
-    QDialog, QVBoxLayout, QHBoxLayout, QDoubleSpinBox, QMainWindow, QWidget, \
-    QPushButton
-from PyQt6.QtCore import QTime, QLocale, QEvent, Qt, QCoreApplication, QObject
+from PyQt6.QtWidgets import QDialog, QVBoxLayout
+from PyQt6.QtCore import QTime, QPointF
 from .constructor import \
-    get_text_label, get_choice_button, \
-    get_button, get_speed_edit_widgets, get_time_edit_widgets, \
-    get_speed_edit_layout, get_time_edit_layout, get_time_edit_widget, \
-    get_point_edit_layout
-from .utils import process_time, get_open_file_names
+    get_text_label, get_choice_button, get_button, \
+    get_speed_edit_widget, get_time_edit_widgets, \
+    get_speed_edit_layout, get_time_edit_layout, \
+    get_time_edit_widget, get_point_edit_layout
 from .my_async import MyAsyncDialogWindow
 from .qt_extensions import MyDialogWindow, MyVideoWidget
+from .utils import get_open_file_names
 
 
 class TrimDialogWindow(MyDialogWindow):
@@ -60,7 +54,7 @@ class SetSpeedDialogWindow(MyDialogWindow):
         main_text = get_text_label(
             self, "Set new video speed:"
         )
-        self.speed_edit = get_speed_edit_widgets(self)
+        self.speed_edit = get_speed_edit_widget(self)
 
         self._set_up_layouts(main_text)
 
@@ -96,7 +90,7 @@ class SetPartialSpeedDialogWindow(MyDialogWindow):
 
         self.start_edit, self.end_edit = \
             get_time_edit_widgets(self, current_time)
-        self.speed_edit = get_speed_edit_widgets(self)
+        self.speed_edit = get_speed_edit_widget(self)
 
         self._set_up_layouts(
             time_text,
@@ -192,7 +186,11 @@ class MergeIntoDialogWindow(MyDialogWindow):
 
 class OverlayDialogWindow(MyAsyncDialogWindow):
     def __init__(self, sender: MyVideoWidget):
-        super().__init__("overlay dialog window", sender, have_choice_button=False)
+        super().__init__(
+            "overlay dialog window",
+            sender,
+            have_choice_button=False
+        )
         self.filenames = None
 
         main_text = get_text_label(
@@ -228,8 +226,9 @@ class OverlayDialogWindow(MyAsyncDialogWindow):
         # TODO
         get_open_filenames_wrapper(self)
 
-    def get_result(self) -> tuple[QTime, list[str]]:
-        pass
+    def get_result(self) -> tuple[QPointF, list[str]]:
+        return QPointF(self.x_edit.value(), self.y_edit.value()), \
+               self.filenames
 
 
 def get_open_filenames_wrapper(obj: Union[OverlayDialogWindow, TrimDialogWindow]) -> None:

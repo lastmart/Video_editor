@@ -1,8 +1,8 @@
-from PyQt6.QtCore import Qt, QThreadPool
+from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QMouseEvent
 from PyQt6.QtMultimediaWidgets import QVideoWidget
 from PyQt6.QtWidgets import QDialog
-from .constructor import get_choice_button, get_speed_edit_widgets, get_button
+from .constructor import get_choice_button
 
 
 class MyDialogWindow(QDialog):

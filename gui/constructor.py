@@ -2,7 +2,7 @@ from PyQt6 import QtWidgets
 from PyQt6.QtCore import QLocale, QTime
 from PyQt6.QtWidgets import \
     QStyle, QLabel, QDialog, QDialogButtonBox, QWidget, QPushButton, \
-    QDoubleSpinBox, QHBoxLayout
+    QDoubleSpinBox, QHBoxLayout, QSpinBox
 from typing import Union
 from .utils import process_time
 
@@ -66,7 +66,7 @@ def get_time_edit_widget(
     return time_edit
 
 
-def get_speed_edit_widgets(obj: QDialog) -> QDoubleSpinBox:
+def get_speed_edit_widget(obj: QDialog) -> QDoubleSpinBox:
     speed_edit = QDoubleSpinBox(obj)
     speed_edit.setDecimals(1)
     speed_edit.setValue(1.0)
@@ -75,8 +75,18 @@ def get_speed_edit_widgets(obj: QDialog) -> QDoubleSpinBox:
     return speed_edit
 
 
-def get_point_edit_widget():
-    pass
+def get_int_edit_widget(obj: QDialog, is_enabled=False) -> QSpinBox:
+    int_edit = QSpinBox(obj)
+    int_edit.setValue(0)
+    int_edit.setMinimum(0)
+    int_edit.setMaximum(9999)
+    int_edit.setEnabled(is_enabled)
+
+    return int_edit
+
+
+def get_point_edit_widget(obj: QDialog) -> tuple[QSpinBox, QSpinBox]:
+    return get_int_edit_widget(obj), get_int_edit_widget(obj)
 
 
 def get_speed_edit_layout(
@@ -105,8 +115,8 @@ def get_time_edit_layout(
 
 def get_point_edit_layout(
     obj: QDialog,
-    x_edit: QDoubleSpinBox,
-    y_edit: QDoubleSpinBox
+    x_edit: QSpinBox,
+    y_edit: QSpinBox
 ) -> QHBoxLayout:
     point_edit_layout = QHBoxLayout()
     point_edit_layout.addWidget(get_text_label(obj, "x:"))

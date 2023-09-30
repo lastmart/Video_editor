@@ -17,7 +17,7 @@ from .utils import \
     OperationType, OperationSystem, OS_TYPE, get_open_file_name, \
     get_open_file_names, get_save_file_name, process_time
 from .constructor import get_volume_icon, get_text_label
-from .qt_extension import MyVideoWidgets
+from .qt_extensions import MyVideoWidget
 from .message import *
 
 
@@ -29,7 +29,7 @@ class VideoEditorWindow(QWidget):
         self.setGeometry(100, 100, 900, 600)
 
         self.media_player = QMediaPlayer(None)
-        self.video_widget = MyVideoWidgets()
+        self.video_widget = MyVideoWidget()
         self.audio_output = QAudioOutput()
 
         self._set_up_play_button()
@@ -341,7 +341,7 @@ class VideoEditorWindow(QWidget):
         print(run_set_partial_speed_dialog_window(self.video_slider.value()))
 
     def overlay(self):
-        print(run_overlay_dialog_window(self))
+        print(run_overlay_dialog_window(self.video_widget))
 
     def _process_media_status_changed(self, status: QMediaPlayer.MediaStatus):
         if status == QMediaPlayer.MediaStatus.EndOfMedia:

@@ -5,11 +5,12 @@ from PyQt6.QtWidgets import \
 from PyQt6.QtCore import QTime, QLocale, QEvent, Qt
 from .constructor import \
     get_text_label, get_choice_button, \
-    get_filename_button, get_speed_edit_widgets, get_time_edit_widgets, \
+    get_button, get_speed_edit_widgets, get_time_edit_widgets, \
     get_speed_edit_layout, get_time_edit_layout, get_time_edit_widget, \
     get_point_edit_layout
 from .utils import process_time, get_open_file_names
-from .qt_extension import MyDialogWindow
+from .qt_extensions import MyDialogWindow, MyVideoWidget, MyDialogWindowWithCommutator
+from .windows_commutator import Commutator
 
 
 class TrimDialogWindow(MyDialogWindow):
@@ -161,8 +162,9 @@ class MergeIntoDialogWindow(MyDialogWindow):
         )
         self.time_edit = get_time_edit_widget(self, current_time)
 
-        self.filename_button = get_filename_button(
+        self.filename_button = get_button(
             self,
+            "Select file for merge",
             self._get_open_filenames_wrapper
         )
 
@@ -187,9 +189,10 @@ class MergeIntoDialogWindow(MyDialogWindow):
         return self.time_edit.time(), self.filenames
 
 
-class OverlayDialogWindow(MyDialogWindow):
-    def __init__(self):
+class OverlayDialogWindow(MyDialogWindowWithCommutator):
+    def __init__(self, sender: MyVideoWidget):
         super().__init__("overlay dialog window", have_choice_button=False)
+        self.commutator = Commutator(sender, self)
         self.filenames = None
 
         main_text = get_text_label(
@@ -200,11 +203,10 @@ class OverlayDialogWindow(MyDialogWindow):
             "location in the main window and click"
         )
 
-        self.x_edit = get_speed_edit_widgets(self)
-        self.y_edit = get_speed_edit_widgets(self)
-
-        self.filename_button = get_filename_button(
+        self.location_button = get_button(self, "Select location", self.commutator.start)
+        self.filename_button = get_button(
             self,
+            "Select file for overlay",
             self._get_open_filenames_wrapper
         )
 
@@ -219,6 +221,7 @@ class OverlayDialogWindow(MyDialogWindow):
         main_layout = QVBoxLayout()
         main_layout.addWidget(main_text)
         main_layout.addLayout(point_edit_layout)
+        main_layout.addWidget(self.location_button)
         main_layout.addWidget(self.filename_button)
 
         self.setLayout(main_layout)
@@ -231,6 +234,14 @@ class OverlayDialogWindow(MyDialogWindow):
 
     def get_result(self) -> tuple[QTime, list[str]]:
         pass
+
+    def execute(self) -> tuple:
+        self.show()
+        if self.exec() == QDialog.DialogCode.Accepted:
+            self.commutator.exit = True
+            return self.get_result()
+        else:
+            return None
 
 
 def run_trim_dialog_window(current_time: int, main_text: str) -> list:
@@ -253,8 +264,8 @@ def run_set_partial_speed_dialog_window(current_time: int) -> QTime:
     return window.execute()
 
 
-def run_overlay_dialog_window(obj: QWidget):
-    window = OverlayDialogWindow(obj)
+def run_overlay_dialog_window(sender: MyVideoWidget):
+    window = OverlayDialogWindow(sender)
     return window.execute()
 
 

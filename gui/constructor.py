@@ -38,20 +38,11 @@ def get_choice_button(obj: QDialog) -> QDialogButtonBox:
     return choice_button
 
 
-def get_filename_button(obj: QDialog, func: callable) -> QPushButton:
-    button = QPushButton("Select file for merge", obj)
+def get_button(obj: QDialog, title: str, func: callable) -> QPushButton:
+    button = QPushButton(title, obj)
     button.clicked.connect(func)
 
     return button
-
-
-def get_speed_edit_widgets(obj: QDialog) -> QDoubleSpinBox:
-    speed_edit = QDoubleSpinBox(obj)
-    speed_edit.setDecimals(1)
-    speed_edit.setValue(1.0)
-    speed_edit.setLocale(QLocale("C"))
-
-    return speed_edit
 
 
 def get_time_edit_widgets(
@@ -73,6 +64,19 @@ def get_time_edit_widget(
     time_edit.setTime(QTime(*process_time(current_time)))
 
     return time_edit
+
+
+def get_speed_edit_widgets(obj: QDialog) -> QDoubleSpinBox:
+    speed_edit = QDoubleSpinBox(obj)
+    speed_edit.setDecimals(1)
+    speed_edit.setValue(1.0)
+    speed_edit.setLocale(QLocale("C"))
+
+    return speed_edit
+
+
+def get_point_edit_widget():
+    pass
 
 
 def get_speed_edit_layout(

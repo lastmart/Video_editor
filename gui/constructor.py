@@ -1,7 +1,8 @@
 from PyQt6 import QtWidgets
 from PyQt6.QtCore import QLocale, QTime
 from PyQt6.QtWidgets import \
-    QStyle, QLabel, QDialog, QDialogButtonBox, QWidget, QPushButton, \
+    QStyle, QLabel, QDialog, \
+    QDialogButtonBox, QWidget, QPushButton, \
     QDoubleSpinBox, QHBoxLayout, QSpinBox
 from typing import Union
 from .utils import process_time

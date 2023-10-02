@@ -1,7 +1,7 @@
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QObject, pyqtSignal
 from PyQt6.QtGui import QMouseEvent
 from PyQt6.QtMultimediaWidgets import QVideoWidget
-from PyQt6.QtWidgets import QDialog
+from PyQt6.QtWidgets import QDialog, QPushButton, QSpinBox
 from .constructor import get_choice_button, get_button
 from .utils import get_open_file_names
 
@@ -74,3 +74,37 @@ class MyVideoWidget(QVideoWidget):
             self.position = position
 
         super().mousePressEvent(event)
+
+
+class MyAsyncButtonData:
+    def __init__(
+        self,
+        obj: QDialog,
+        title: str,
+        tip: str,
+        edit_devices: tuple[QSpinBox, QSpinBox],
+    ):
+        super().__init__()
+        self.internal_button = QPushButton(title, obj)
+        self.internal_button.setToolTip(tip)
+        self.edit_devices = edit_devices
+
+
+class MyAsyncButton(QObject):
+    clicked = pyqtSignal(MyAsyncButtonData)
+
+    def __init__(
+        self,
+        obj: QDialog,
+        title: str,
+        tip: str,
+        edit_devices: tuple[QSpinBox, QSpinBox],
+        slot: callable
+    ):
+        super().__init__()
+        self.button_data = MyAsyncButtonData(obj, title, tip, edit_devices)
+        self.button_data.internal_button.clicked.connect(self.emitClicked)
+        self.clicked.connect(slot)
+
+    def emitClicked(self):
+        self.clicked.emit(self.button_data)

@@ -1,17 +1,17 @@
 import sys
 from PyQt6.QtCore import Qt, QUrl
-from PyQt6.QtGui import QMouseEvent
 from PyQt6.QtWidgets import \
     QApplication, QWidget, QVBoxLayout, QPushButton, QSlider, \
     QStyle, QHBoxLayout, QMenu, QMenuBar, QSpacerItem, QSizePolicy
-from PyQt6.QtMultimediaWidgets import QVideoWidget
 from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput
 from VideoEditor.video_editor import \
     merge_videos_and_save, trim_and_save_video, \
     set_video_speed_and_save, copy_video
 from .supporting_windows import \
     run_trim_dialog_window, run_set_speed_dialog_window, \
-    run_ask_confirmation_dialog_window, run_merge_into_dialog_window, run_set_partial_speed_dialog_window, run_overlay_dialog_window
+    run_ask_confirmation_dialog_window, run_merge_into_dialog_window, \
+    run_set_partial_speed_dialog_window, run_overlay_dialog_window, \
+    run_crop_dialog_window
 from .cache_handler import cache_handler
 from .utils import \
     OperationType, OperationSystem, OS_TYPE, get_open_file_name, \
@@ -76,6 +76,7 @@ class VideoEditorWindow(QWidget):
         tools_submenu.addAction("Trim", self.trim)
         tools_submenu.addAction("Set speed", self.set_speed)
         tools_submenu.addAction("Overlay", self.overlay)
+        tools_submenu.addAction("Crop", self.crop)
 
         partial_tools_submenu = QMenu("&Partial tools", self)
         edit_menu.addMenu(partial_tools_submenu)
@@ -342,6 +343,9 @@ class VideoEditorWindow(QWidget):
 
     def overlay(self):
         print(run_overlay_dialog_window(self.video_widget))
+
+    def crop(self):
+        print(run_crop_dialog_window(self.video_widget))
 
     def _process_media_status_changed(self, status: QMediaPlayer.MediaStatus):
         if status == QMediaPlayer.MediaStatus.EndOfMedia:

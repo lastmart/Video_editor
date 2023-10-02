@@ -1,16 +1,15 @@
-from typing import Union
 from PyQt6.QtWidgets import QDialog, QVBoxLayout
 from PyQt6.QtCore import QTime, QPointF
 from .constructor import \
-    get_text_label, get_choice_button, get_button, \
+    get_text_label, get_choice_button, \
     get_speed_edit_widget, get_time_edit_widgets, \
     get_speed_edit_layout, get_time_edit_layout, \
-    get_time_edit_widget, get_point_edit_layout
+    get_time_edit_widget, get_point_edit_layout, \
+    get_point_edit_widget
 from .my_async import MyAsyncDialogWindow
 from .qt_extensions import \
     MyDialogWindow, MyVideoWidget, \
-    OpenFilenameDialogMixin
-from .utils import get_open_file_names
+    OpenFilenameDialogMixin, MyAsyncButton
 
 
 class TrimDialogWindow(MyDialogWindow):
@@ -204,7 +203,7 @@ class OverlayDialogWindow(MyAsyncDialogWindow, OpenFilenameDialogMixin):
         main_layout = QVBoxLayout()
         main_layout.addWidget(main_text)
         main_layout.addLayout(point_edit_layout)
-        main_layout.addWidget(self.location_button)
+        main_layout.addWidget(self.location_button.button_data.internal_button)
         main_layout.addWidget(self.filename_button)
 
         self.setLayout(main_layout)
@@ -212,6 +211,55 @@ class OverlayDialogWindow(MyAsyncDialogWindow, OpenFilenameDialogMixin):
     def get_result(self) -> tuple[QPointF, list[str]]:
         return QPointF(self.x_edit.value(), self.y_edit.value()), \
                self.filenames
+
+
+class CropDialogWindow(MyAsyncDialogWindow):
+    def __init__(self, sender: MyVideoWidget):
+        super().__init__(
+            "crop dialog window",
+            sender,
+            have_choice_button=True
+        )
+
+        main_text = get_text_label(
+            self,
+            "Select the position of the upper left\n"
+            "and lower right corners to be cropped"
+        )
+        self.x2_edit, self.y2_edit = get_point_edit_widget(self)
+
+        self.location2_button = MyAsyncButton(
+            self,
+            "Select location for lower right",
+            self.tip,
+            (self.x2_edit, self.y2_edit),
+            self.slot
+        )
+        self.location2_button.clicked.connect(self.slot)
+
+        self._set_up_layouts(main_text)
+
+    def _set_up_layouts(self, main_text):
+        point_edit_layout = get_point_edit_layout(
+            self, self.x_edit, self.y_edit
+        )
+        point2_edit_layout = get_point_edit_layout(
+            self, self.x2_edit, self.y2_edit
+        )
+
+        main_layout = QVBoxLayout()
+        main_layout.addWidget(main_text)
+        main_layout.addLayout(point_edit_layout)
+        main_layout.addWidget(self.location_button.button_data.internal_button)
+        main_layout.addLayout(point2_edit_layout)
+        main_layout.addWidget(self.location2_button.button_data.internal_button)
+        main_layout.addWidget(self.choice_button)
+
+        self.setLayout(main_layout)
+
+    def get_result(self) -> tuple[QPointF, QPointF]:
+        return QPointF(self.x_edit.value(), self.y_edit.value()), \
+               QPointF(self.x2_edit.value(), self.y2_edit.value())
 
 
 def run_trim_dialog_window(current_time: int, main_text: str) -> list:
@@ -236,6 +284,11 @@ def run_set_partial_speed_dialog_window(current_time: int) -> QTime:
 
 def run_overlay_dialog_window(sender: MyVideoWidget):
     window = OverlayDialogWindow(sender)
+    return window.execute()
+
+
+def run_crop_dialog_window(sender: MyVideoWidget):
+    window = CropDialogWindow(sender)
     return window.execute()
 
 

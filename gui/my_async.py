@@ -28,8 +28,6 @@ class MyAsyncDialogWindow(MyDialogWindow):
         )
         self.location_button.setToolTip(tip)
 
-        self.installEventFilter(self)
-
     def start_async_task(self):
         update_async_button(self.location_button, while_async=True)
         worker = AsyncCommutator(self.sender, receiver=self)

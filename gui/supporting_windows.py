@@ -7,7 +7,9 @@ from .constructor import \
     get_speed_edit_layout, get_time_edit_layout, \
     get_time_edit_widget, get_point_edit_layout
 from .my_async import MyAsyncDialogWindow
-from .qt_extensions import MyDialogWindow, MyVideoWidget
+from .qt_extensions import \
+    MyDialogWindow, MyVideoWidget, \
+    OpenFilenameDialogMixin
 from .utils import get_open_file_names
 
 
@@ -150,21 +152,15 @@ class AskConfirmationDialogWindow(QDialog):
         self.setLayout(main_layout)
 
 
-class MergeIntoDialogWindow(MyDialogWindow):
+class MergeIntoDialogWindow(MyDialogWindow, OpenFilenameDialogMixin):
     def __init__(self, current_time: int):
         super().__init__("merge into dialog", have_choice_button=False)
-        self.filenames = None
+        self.configurate(self, "Select file for merge")
 
         main_text = get_text_label(
             self, "Select the time at which the merge will be performed"
         )
         self.time_edit = get_time_edit_widget(self, current_time)
-
-        self.filename_button = get_button(
-            self,
-            "Select file for merge",
-            self._get_open_filenames_wrapper
-        )
 
         self._set_up_layouts(main_text)
 
@@ -177,32 +173,25 @@ class MergeIntoDialogWindow(MyDialogWindow):
 
         self.setLayout(main_layout)
 
-    def _get_open_filenames_wrapper(self) -> None:
-        get_open_filenames_wrapper(self)
-
     def get_result(self) -> tuple[QTime, list[str]]:
         return self.time_edit.time(), self.filenames
 
 
-class OverlayDialogWindow(MyAsyncDialogWindow):
+class OverlayDialogWindow(MyAsyncDialogWindow, OpenFilenameDialogMixin):
     def __init__(self, sender: MyVideoWidget):
         super().__init__(
             "overlay dialog window",
             sender,
             have_choice_button=False
         )
-        self.filenames = None
+        self.configurate(
+            self, "Select file for overlay"
+        )
 
         main_text = get_text_label(
             self,
             "Select the position of the upper left corner\n"
             "of the overlay media using the cursor"
-        )
-
-        self.filename_button = get_button(
-            self,
-            "Select file for overlay",
-            self._get_open_filenames_wrapper
         )
 
         self._set_up_layouts(main_text)
@@ -220,20 +209,9 @@ class OverlayDialogWindow(MyAsyncDialogWindow):
 
         self.setLayout(main_layout)
 
-    def _get_open_filenames_wrapper(self) -> None:
-        # TODO
-        get_open_filenames_wrapper(self)
-
     def get_result(self) -> tuple[QPointF, list[str]]:
         return QPointF(self.x_edit.value(), self.y_edit.value()), \
                self.filenames
-
-
-def get_open_filenames_wrapper(obj: Union[OverlayDialogWindow, TrimDialogWindow]) -> None:
-    obj.filenames = get_open_file_names(obj)
-    obj.filename_button.setText("The files were selected")
-    obj.filename_button.setEnabled(False)
-    obj.done(1)
 
 
 def run_trim_dialog_window(current_time: int, main_text: str) -> list:

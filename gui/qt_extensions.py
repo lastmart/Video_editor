@@ -2,7 +2,8 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QMouseEvent
 from PyQt6.QtMultimediaWidgets import QVideoWidget
 from PyQt6.QtWidgets import QDialog
-from .constructor import get_choice_button
+from .constructor import get_choice_button, get_button
+from .utils import get_open_file_names
 
 
 class MyDialogWindow(QDialog):
@@ -24,6 +25,29 @@ class MyDialogWindow(QDialog):
             return self.get_result()
         else:
             return None
+
+
+class OpenFilenameDialogMixin:
+    def __init__(self):
+        self.target = None
+        self.filenames = None
+        self.filename_button = None
+
+    def configurate(self, obj: MyDialogWindow, button_title: str):
+        self.target = obj
+        self.filenames = None
+
+        self.filename_button = get_button(
+            self.target,
+            button_title,
+            self.get_open_filenames_wrapper
+        )
+
+    def get_open_filenames_wrapper(self) -> None:
+        self.filenames = get_open_file_names(self.target)
+        self.filename_button.setText("The files were selected")
+        self.filename_button.setEnabled(False)
+        self.target.done(1)
 
 
 class MyVideoWidget(QVideoWidget):

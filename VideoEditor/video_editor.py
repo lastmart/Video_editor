@@ -96,9 +96,6 @@ class Point:
     def __ge__(self, value: int) -> bool:
         return self.x >= value and self.y >= value
 
-    def __lt__(self, value: int) -> bool:
-        return self.x < value and self.y < value
-
     def __sub__(self, other):
         return Point((self.x-other.x, self.y-other.y))
 
@@ -421,10 +418,10 @@ def crop_and_save(
     :return: None
     """
     width, height, _, _ = get_video_parameters(video_path)
-    if (point2 - point1) < 0:
+    if not((point2 - point1) >= 0):
         raise ValueError('Cropping boundaries are incorrectly specified:\nupper left: {}\nbottom right {}'
                          .format(point1, point2))
-    if point1 < 0 or point2 < 0 or width < point2.x or height < point2.y:
+    if not(point1 >= 0) or not(point2 >= 0) or width < point2.x or height < point2.y:
         raise ValueError('The crop point extends beyond the boundaries of the video:\nupper left: {}\nbottom right {}'
                          .format(point1, point2))
 

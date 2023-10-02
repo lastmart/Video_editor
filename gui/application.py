@@ -6,7 +6,7 @@ from PyQt6.QtWidgets import \
 from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput
 from VideoEditor.video_editor import \
     merge_videos_and_save, trim_and_save_video, \
-    set_video_speed_and_save, copy_video, cut_part_and_save_video, insert_video_and_save
+    set_video_speed_and_save, copy_video, cut_part_and_save_video, insert_video_and_save, overlay_video_on_another_and_save, crop_and_save
 from .supporting_windows import \
     run_trim_dialog_window, run_set_speed_dialog_window, \
     run_ask_confirmation_dialog_window, run_merge_into_dialog_window, \
@@ -274,9 +274,7 @@ class VideoEditorWindow(QWidget):
         except ValueError:
             raise_wrong_time_error()
         else:
-            cache_handler.update_current_index(OperationType.INCREASE)
-            self.have_unsaved_changes = True
-            self._play_resulting_video()
+            self._internal_operation_for_tools_function()
 
     def trim(self):
         main_text = "Select the fragment that will remain:"
@@ -316,9 +314,7 @@ class VideoEditorWindow(QWidget):
         except RuntimeError:
             raise_wrong_time_error()
         else:
-            cache_handler.update_current_index(OperationType.INCREASE)
-            self.have_unsaved_changes = True
-            self._play_resulting_video()
+            self._internal_operation_for_tools_function()
 
     def set_speed(self):
         self._base_set_speed(
@@ -358,15 +354,67 @@ class VideoEditorWindow(QWidget):
         except (ZeroDivisionError, ValueError):
             raise_wrong_speed_error()
         else:
-            cache_handler.update_current_index(OperationType.INCREASE)
-            self.have_unsaved_changes = True
-            self._play_resulting_video()
+            self._internal_operation_for_tools_function()
 
     def overlay(self):
-        print(run_overlay_dialog_window(self.video_widget))
+        if cache_handler.current_index == 0:
+            raise_no_file_error()
+            return
+
+        user_args = run_overlay_dialog_window(self.video_widget)
+
+        if user_args is None:
+            return
+
+        point = user_args[0]
+        file_path = user_args[1]
+
+        try:
+            cache_handler.prepare_cache_folder(
+                cache_handler.current_index + 1
+            )
+
+            overlay_video_on_another_and_save(
+                cache_handler.get_current_path_to_look(),
+                file_path,
+                cache_handler.get_current_path_to_save(),
+                point.x(),
+                point.y()
+            )
+        except IOError:
+            raise IOError
+        else:
+            self._internal_operation_for_tools_function()
 
     def crop(self):
-        print(run_crop_dialog_window(self.video_widget))
+        if cache_handler.current_index == 0:
+            raise_no_file_error()
+            return
+
+        points = run_crop_dialog_window(self.video_widget)
+
+        if points is None:
+            return
+
+        try:
+            cache_handler.prepare_cache_folder(
+                cache_handler.current_index + 1
+            )
+
+            crop_and_save(
+                cache_handler.get_current_path_to_look(),
+                cache_handler.get_current_path_to_save(),
+                *points
+            )
+        except IOError:
+            raise IOError
+        else:
+            self._internal_operation_for_tools_function()
+
+    def _internal_operation_for_tools_function(self):
+        cache_handler.update_current_index(OperationType.INCREASE)
+        self.have_unsaved_changes = True
+        self._play_resulting_video()
 
     def _process_media_status_changed(self, status: QMediaPlayer.MediaStatus):
         if status == QMediaPlayer.MediaStatus.EndOfMedia:

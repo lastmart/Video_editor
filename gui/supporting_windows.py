@@ -284,7 +284,9 @@ def run_set_partial_speed_dialog_window(current_time: int) -> QTime:
     return window.execute()
 
 
-def run_overlay_dialog_window(sender: MyVideoWidget):
+def run_overlay_dialog_window(
+    sender: MyVideoWidget
+) -> tuple[QPointF, list[str]]:
     window = OverlayDialogWindow(sender)
     return window.execute()
 

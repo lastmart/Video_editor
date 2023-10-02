@@ -1,4 +1,5 @@
 from enum import Enum
+from typing import Union
 from functools import wraps
 from PyQt6.QtCore import QSysInfo, QTime
 from PyQt6.QtWidgets import QFileDialog
@@ -37,6 +38,7 @@ def process_paths(system: OperationSystem):
     This is a decorator that takes a list of
     paths or a path and sets the correct slashes
     """
+
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
@@ -107,3 +109,16 @@ def process_args_for_merge(
     args_for_merge.append(save_path)
 
     return args_for_merge
+
+
+def process_args_for_set_speed(
+    user_args: Union[float, list]
+) -> tuple[float, TimeInterval]:
+    if isinstance(user_args, float):
+        speed = user_args
+        interval = None
+    else:
+        speed = user_args[2]
+        interval = process_fragment_time(user_args[0:-1])
+
+    return speed, interval

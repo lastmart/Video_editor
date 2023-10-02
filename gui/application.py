@@ -16,7 +16,7 @@ from .cache_handler import cache_handler
 from .utils import \
     OperationType, OperationSystem, OS_TYPE, \
     get_open_file_name, get_open_file_names, get_save_file_name, \
-    process_time, process_fragment_time, process_args_for_merge
+    process_time, process_fragment_time, process_args_for_merge, process_args_for_set_speed
 from .constructor import get_volume_icon, get_text_label
 from .qt_extensions import MyVideoWidget
 from .message import *
@@ -321,14 +321,28 @@ class VideoEditorWindow(QWidget):
             self._play_resulting_video()
 
     def set_speed(self):
+        self._base_set_speed(
+            run_set_speed_dialog_window,
+            []
+        )
+
+    def set_partial_speed(self):
+        self._base_set_speed(
+            run_set_partial_speed_dialog_window,
+            [self.video_slider.value()]
+        )
+
+    def _base_set_speed(self, set_speed_func: callable, func_arg: list):
         if cache_handler.current_index == 0:
             raise_no_file_error()
             return
 
-        speed = run_set_speed_dialog_window()
+        user_args = set_speed_func(*func_arg)
 
-        if speed is None:
+        if user_args is None:
             return
+
+        speed, interval = process_args_for_set_speed(user_args)
 
         try:
             cache_handler.prepare_cache_folder(
@@ -338,7 +352,8 @@ class VideoEditorWindow(QWidget):
             set_video_speed_and_save(
                 cache_handler.get_current_path_to_look(),
                 speed,
-                cache_handler.get_current_path_to_save()
+                cache_handler.get_current_path_to_save(),
+                time_interval=interval
             )
         except (ZeroDivisionError, ValueError):
             raise_wrong_speed_error()
@@ -346,9 +361,6 @@ class VideoEditorWindow(QWidget):
             cache_handler.update_current_index(OperationType.INCREASE)
             self.have_unsaved_changes = True
             self._play_resulting_video()
-
-    def set_partial_speed(self):
-        print(run_set_partial_speed_dialog_window(self.video_slider.value()))
 
     def overlay(self):
         print(run_overlay_dialog_window(self.video_widget))

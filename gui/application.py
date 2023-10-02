@@ -6,7 +6,7 @@ from PyQt6.QtWidgets import \
 from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput
 from VideoEditor.video_editor import \
     merge_videos_and_save, trim_and_save_video, \
-    set_video_speed_and_save, copy_video
+    set_video_speed_and_save, copy_video, cut_part_and_save_video
 from .supporting_windows import \
     run_trim_dialog_window, run_set_speed_dialog_window, \
     run_ask_confirmation_dialog_window, run_merge_into_dialog_window, \
@@ -14,8 +14,9 @@ from .supporting_windows import \
     run_crop_dialog_window
 from .cache_handler import cache_handler
 from .utils import \
-    OperationType, OperationSystem, OS_TYPE, get_open_file_name, \
-    get_open_file_names, get_save_file_name, process_time
+    OperationType, OperationSystem, OS_TYPE, \
+    get_open_file_name, get_open_file_names, get_save_file_name, \
+    process_time, process_fragment_time
 from .constructor import get_volume_icon, get_text_label
 from .qt_extensions import MyVideoWidget
 from .message import *
@@ -268,8 +269,7 @@ class VideoEditorWindow(QWidget):
 
     def cut_out(self):
         main_text = "Select the fragment that will be deleted:"
-        # TODO
-        self._base_cut(main_text, trim_and_save_video)
+        self._base_cut(main_text, cut_part_and_save_video)
 
     def _base_cut(self,
                   main_text: str,
@@ -286,12 +286,7 @@ class VideoEditorWindow(QWidget):
 
         if fragment_time is None:
             return
-
-        start = fragment_time[0]
-        end = fragment_time[1]
-
-        start_time = (start.minute(), start.second())
-        end_time = (end.minute(), end.second())
+        time_interval = process_fragment_time(fragment_time)
 
         try:
             cache_handler.prepare_cache_folder(
@@ -300,8 +295,7 @@ class VideoEditorWindow(QWidget):
 
             cut_func(
                 cache_handler.get_current_path_to_look(),
-                start_time,
-                end_time,
+                time_interval,
                 cache_handler.get_current_path_to_save()
             )
         except RuntimeError:

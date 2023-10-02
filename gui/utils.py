@@ -1,7 +1,8 @@
 from enum import Enum
 from functools import wraps
-from PyQt6.QtCore import QSysInfo
+from PyQt6.QtCore import QSysInfo, QTime
 from PyQt6.QtWidgets import QFileDialog
+from VideoEditor.video_editor import TimeInterval
 
 
 class MessageType(Enum):
@@ -81,3 +82,8 @@ def process_time(time: int) -> tuple:
     seconds = int((time / 1000) % 60)
 
     return hours, minutes, seconds, 0
+
+
+def process_fragment_time(fragment_time: tuple[QTime, QTime]) -> TimeInterval:
+    start, end = fragment_time
+    return TimeInterval(start, end)

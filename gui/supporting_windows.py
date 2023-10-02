@@ -262,7 +262,9 @@ class CropDialogWindow(MyAsyncDialogWindow):
                QPointF(self.x2_edit.value(), self.y2_edit.value())
 
 
-def run_trim_dialog_window(current_time: int, main_text: str) -> list:
+def run_trim_dialog_window(
+    current_time: int, main_text: str
+) -> tuple[QTime, QTime]:
     window = TrimDialogWindow(current_time, main_text)
     return window.execute()
 

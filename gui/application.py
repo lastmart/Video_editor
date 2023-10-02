@@ -1,22 +1,26 @@
 import sys
-from PyQt6.QtCore import Qt, QUrl, QTime
+from PyQt6.QtCore import Qt, QUrl
 from PyQt6.QtWidgets import \
     QApplication, QWidget, QVBoxLayout, QPushButton, QSlider, \
     QStyle, QHBoxLayout, QMenu, QMenuBar, QSpacerItem, QSizePolicy
 from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput
 from VideoEditor.video_editor import \
     merge_videos_and_save, trim_and_save_video, \
-    set_video_speed_and_save, copy_video, cut_part_and_save_video, insert_video_and_save, overlay_video_on_another_and_save, crop_and_save
+    set_video_speed_and_save, copy_video, cut_part_and_save_video, \
+    insert_video_and_save, overlay_video_on_another_and_save, \
+    crop_and_save, Point
 from .supporting_windows import \
     run_trim_dialog_window, run_set_speed_dialog_window, \
     run_ask_confirmation_dialog_window, run_merge_into_dialog_window, \
     run_set_partial_speed_dialog_window, run_overlay_dialog_window, \
     run_crop_dialog_window
 from .cache_handler import cache_handler
+from VideoEditor.utils import TimeIntervalError
 from .utils import \
     OperationType, OperationSystem, OS_TYPE, \
     get_open_file_name, get_open_file_names, get_save_file_name, \
-    process_time, process_fragment_time, process_args_for_merge, process_args_for_set_speed
+    process_time, process_fragment_time, process_args_for_merge, \
+    process_args_for_set_speed
 from .constructor import get_volume_icon, get_text_label
 from .qt_extensions import MyVideoWidget
 from .message import *
@@ -351,6 +355,8 @@ class VideoEditorWindow(QWidget):
                 cache_handler.get_current_path_to_save(),
                 time_interval=interval
             )
+        except TimeIntervalError:
+            raise_wrong_time_error()
         except (ZeroDivisionError, ValueError):
             raise_wrong_speed_error()
         else:
@@ -367,7 +373,9 @@ class VideoEditorWindow(QWidget):
             return
 
         point = user_args[0]
-        file_path = user_args[1]
+        file_path = user_args[1][0]
+
+        print(point.x())
 
         try:
             cache_handler.prepare_cache_folder(
@@ -404,7 +412,8 @@ class VideoEditorWindow(QWidget):
             crop_and_save(
                 cache_handler.get_current_path_to_look(),
                 cache_handler.get_current_path_to_save(),
-                *points
+                Point(points[0]),
+                Point(points[1])
             )
         except IOError:
             raise IOError

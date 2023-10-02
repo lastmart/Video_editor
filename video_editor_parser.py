@@ -1,7 +1,7 @@
 from VideoEditor.video_editor import \
     (merge_videos_and_save, trim_and_save_video, set_video_speed_and_save,
      overlay_video_on_another_and_save, insert_video_and_save,
-     cut_part_and_save_video, crop_and_save, TimeInterval)
+     cut_part_and_save_video, crop_and_save, TimeInterval, Point)
 from VideoEditor.utils import Usage, convert_time_to_seconds
 from gui.application import run_gui
 import argparse
@@ -61,7 +61,7 @@ class Parser:
             else:
                 insert_video_and_save(
                     arg.videos[0],
-                    arg.videos[1],
+                    arg.videos[1:],
                     convert_time_to_seconds(arg.start_time),
                     arg.path_to_save,
                     mode=Usage.CONSOLE
@@ -69,7 +69,8 @@ class Parser:
 
         parser.add_argument(
             "-s", dest="start_time", type=str, default=None,
-            help="Start time to insert first video to second in format: HH:MM:SS (default: video duration)"
+            help="Start time of insertion into the first of all remaining ones in the format:"
+                 " HH:MM:SS (default: video duration)"
         )
         parser.set_defaults(func=select_insert_or_merge)
 
@@ -157,9 +158,7 @@ class Parser:
         parser.set_defaults(func=lambda x: crop_and_save(
             x.videos[0],
             x.path_to_save,
-            x_shift=x.shifts[0] if x.shifts is not None else None,
-            y_shift=x.shifts[1] if x.shifts is not None else None,
-            width=x.width,
-            height=x.height,
+            point1=Point((x.shifts[0], x.shifts[1])),
+            point2=Point((x.shifts[0] + x.width, x.shifts[1] + x.height)),
             mode=Usage.CONSOLE
         ))

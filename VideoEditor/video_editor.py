@@ -1,10 +1,10 @@
 from .utils import \
     (check_paths_correctness, scale_frame_in_bounds, get_video_duration,
-     get_video_parameters, Usage)
+     get_video_parameters, Usage, TimeIntervalError)
 from .progress_bar import \
     show_progress_in_console, show_progress_in_gui
 from collections import namedtuple
-from PyQt6.QtCore import QTime
+from PyQt6.QtCore import QTime, QPointF
 from typing import Union
 import ffmpeg
 import sys
@@ -63,6 +63,49 @@ class TimeInterval:
                              .format(begin=self.begin, end=self.end))
 
 
+class Point:
+    _x = None
+    _y = None
+
+    def __init__(self, point: Union[QPointF, tuple[int, int]]):
+        self.x = int(point.x()) if isinstance(point, QPointF) else point[0]
+        self.y = int(point.y()) if isinstance(point, QPointF) else point[1]
+
+    @property
+    def x(self):
+        return self._x
+
+    @x.setter
+    def x(self, value: int):
+        if not isinstance(value, int):
+            raise ValueError('X coordinate should be int, but given {} of type'
+                             .format(value,type(value)))
+        self._x = value
+
+    @property
+    def y(self):
+        return self._y
+
+    @y.setter
+    def y(self, value: int):
+        if not isinstance(value, int):
+            raise ValueError('Y coordinate should be int, but given {} of type'
+                             .format(value, type(value)))
+        self._y = value
+
+    def __ge__(self, value: int) -> bool:
+        return self.x >= value and self.y >= value
+
+    def __lt__(self, value: int) -> bool:
+        return self.x < value and self.y < value
+
+    def __sub__(self, other):
+        return Point((self.x-other.x, self.y-other.y))
+
+    def __str__(self):
+        return "X: {}, Y: {}".format(self._x, self._y)
+
+
 FilterableStream = namedtuple("FilterableStream", ['video', "audio"])
 
 
@@ -107,7 +150,7 @@ def merge_videos_and_save(
 
 def insert_video_and_save(
         main_video_path: str,
-        insert_path: str,
+        insert_paths: Union[str, list[str]],
         insert_time_in_seconds: int,
         path_to_save: str,
         is_overwrite: bool = False,
@@ -117,7 +160,7 @@ def insert_video_and_save(
     Insert one video in another and save result. If one of the options for the final
     video is not specified, this option is taken from the main video
     :param main_video_path: absolute path to the video where you want to insert another video
-    :param insert_path: absolute path to the video which you want to insert
+    :param insert_paths: absolute paths to the videos which you want to insert
     :param insert_time_in_seconds: time from the beginning of the main video after which another
      video will be inserted
     :param path_to_save: the absolute path to the result video
@@ -126,17 +169,28 @@ def insert_video_and_save(
     :return: None
     """
     main_video_duration = get_video_duration(main_video_path)
+
     if main_video_duration < insert_time_in_seconds:
         raise ValueError('Time to insert ({}) beyond video duration({})'
                          .format(insert_time_in_seconds, main_video_duration))
+    if isinstance(insert_paths, str):
+        insert_paths = [insert_paths]
+    if insert_time_in_seconds == 0:
+        merge_videos_and_save(
+            [*insert_paths, main_video_path],
+            path_to_save,
+            is_overwrite=is_overwrite,
+            mode=mode)
+        return
+
     result_video_parts = [
         open_videos(main_video_path, ss=0, t=insert_time_in_seconds),
-        open_videos(insert_path),
+        *open_videos(insert_paths),
         open_videos(main_video_path, ss=insert_time_in_seconds)
     ]
 
     width, height, fps, sar = get_video_parameters(main_video_path)
-    result_video_duration = main_video_duration + get_video_duration(insert_path)
+    result_video_duration = main_video_duration + sum(map(lambda v: get_video_duration(v), insert_paths))
     merged = merge_videos(result_video_parts, width, height, fps, sar)
     save_video(merged, path_to_save, is_overwrite, result_video_duration, mode)
 
@@ -193,7 +247,7 @@ def trim_and_save_video(
     Trim the end and beginning of the video and save result
     :param video_path: the absolute path to the video which you want to merge
     :param path_to_save: the absolute path to the result video
-    :param time_interval: all time intervals that should be included in the resulting video
+    :param time_interval: time interval that should be included in the resulting video
     :param is_overwrite: overwrites the video even if there is already a video in the save path
     :param mode: where to display progress: in the console or in the GUI
     :return: None
@@ -219,7 +273,7 @@ def cut_part_and_save_video(
     Cut part of the video and save result
     :param video_path: the absolute path to the video which you want to merge
     :param path_to_save: the absolute path to the result video
-    :param time_interval: all time intervals that should be removed in given video
+    :param time_interval: time interval that should be removed in given video
     :param is_overwrite: overwrites the video even if there is already a video in the save path
     :param mode: where to display progress: in the console or in the GUI
     :return: None
@@ -275,8 +329,8 @@ def set_video_speed_and_save(
         raise ValueError('{} is very small'.format(speed))
     video_duration = get_video_duration(video_path)
     if time_interval is not None and video_duration < time_interval.end:
-        raise ValueError('Interval to set speed ({}) beyond video duration({})'
-                         .format(time_interval.end, video_duration))
+        raise TimeIntervalError('Interval to set speed ({}) beyond video duration({})'
+                                .format(time_interval.end, video_duration))
     if time_interval is None:
         changed_speed_video = set_video_speed(open_videos(video_path), speed)
         result_video_duration = video_duration * (1 / speed)
@@ -351,10 +405,8 @@ def overlay_video_on_another_and_save(
 def crop_and_save(
         video_path: str,
         path_to_save: str,
-        x_shift: int,
-        y_shift: int,
-        width: int,
-        height: int,
+        point1: Point,
+        point2: Point,
         is_overwrite: bool = False,
         mode: Usage = Usage.GUI
 ) -> None:
@@ -362,18 +414,24 @@ def crop_and_save(
     Crop video and save result
     :param video_path: absolute path to the video which you want crop
     :param path_to_save: the absolute path to the result video
-    :param x_shift: x-axis offset of the inserted video or image
-    :param y_shift: x-axis offset of the inserted video or image
-    :param width: width of cropped video
-    :param height: height of cropped video
+    :param point1: upper left corner coordinate of cropped video
+    :param point2: bottom right corner coordinate of cropped video
     :param is_overwrite: overwrites the video even if there is already a video in the save path
     :param mode: where to display progress: in the console or in the GUI
     :return: None
     """
+    width, height, _, _ = get_video_parameters(video_path)
+    if (point2 - point1) < 0:
+        raise ValueError('Cropping boundaries are incorrectly specified:\nupper left: {}\nbottom right {}'
+                         .format(point1, point2))
+    if point1 < 0 or point2 < 0 or width < point2.x or height < point2.y:
+        raise ValueError('The crop point extends beyond the boundaries of the video:\nupper left: {}\nbottom right {}'
+                         .format(point1, point2))
+
     stream = open_videos(video_path)
     result_video_duration = get_video_duration(video_path)
     cropped = (ffmpeg
-               .crop(stream, x_shift, y_shift, width, height)
+               .crop(stream, point1.x, point2.x, point2.x - point1.x, point2.y - point1.y)
                .concat(stream.audio, a=1))
     save_video(cropped, path_to_save, is_overwrite, result_video_duration, mode)
 
@@ -422,7 +480,7 @@ def save_video(
 ) -> None:
     if not output_path.endswith('.mp4'):
         output_path += '.mp4'
-    check_paths_correctness(output_path)
+    check_paths_correctness(output_path, is_existing=False)
 
     if isinstance(video, ffmpeg.Stream):
         out = ffmpeg.output(video, output_path)

@@ -1,14 +1,11 @@
 from .utils import \
-    (check_paths_correctness, convert_ratio_to_int, scale_frame_in_bounds,
-     get_video_duration, get_information_about_stream, get_video_parameters,
-     Usage)
+    (check_paths_correctness, scale_frame_in_bounds, get_video_duration,
+     get_video_parameters, Usage)
 from .progress_bar import \
     show_progress_in_console, show_progress_in_gui
 from collections import namedtuple
 from PyQt6.QtCore import QTime
 from typing import Union
-import subprocess
-import datetime
 import ffmpeg
 import sys
 
@@ -17,13 +14,14 @@ class TimeInterval:
     _begin = None
     _end = None
 
-    def __init__(self, start_time: QTime, end_time: QTime):
+    def __init__(self, start_time: Union[QTime, int], end_time: Union[QTime, int]):
         try:
-            self._end = QTime(0, 0).secsTo(end_time)
-            self._begin = QTime(0, 0).secsTo(start_time)
+            self._end = QTime(0, 0).secsTo(end_time) if isinstance(end_time, QTime) else end_time
+            self._begin = QTime(0, 0).secsTo(start_time) if isinstance(start_time, QTime) else start_time
             self._check_interval_correctness()
-        except TypeError as e:
-            raise TypeError("In the values of the boundaries of the TimeInterval not PyQt6.QtCore.QTime") from e
+        except TypeError:
+            raise TypeError("In the values of the boundaries of the TimeInterval not PyQt6.QtCore.QTime or int:\n{}"
+                            .format((type(start_time), type(end_time))))
 
     def get_duration_in_seconds(self) -> int:
         return self.end - self.begin
@@ -130,7 +128,7 @@ def insert_video_and_save(
     main_video_duration = get_video_duration(main_video_path)
     if main_video_duration < insert_time_in_seconds:
         raise ValueError('Time to insert ({}) beyond video duration({})'
-                         .format(insert_time_in_seconds, video_duration))
+                         .format(insert_time_in_seconds, main_video_duration))
     result_video_parts = [
         open_videos(main_video_path, ss=0, t=insert_time_in_seconds),
         open_videos(insert_path),
@@ -162,6 +160,7 @@ def merge_videos(
     :return: ffmpeg.nodes.Node
     """
     concat_params = []
+    transition_duration = 0.25
     for video in videos:
         if unsafe_mod:
             filtered_video = video.video
@@ -169,7 +168,16 @@ def merge_videos(
             filtered_video = (
                 ffmpeg.filter(video.video, 'scale', h=height, w=width)
                 .filter('setsar', sar=sar)
-                .filter('fps', fps=fps))
+                .filter('fps', fps=fps)
+            )
+            if video is not videos[0]:
+                filtered_video = ffmpeg.filter(filtered_video, 'fade', t="in",
+                                               st=transition_duration, d=transition_duration)
+            if video is not videos[-1]:
+                duration = get_video_duration(video.node)
+                filtered_video = ffmpeg.filter(filtered_video, 'fade', t="out",
+                                               st=duration - transition_duration, d=transition_duration)
+
         concat_params.extend((filtered_video, video.audio))
     return ffmpeg.concat(*concat_params, a=1).node
 
@@ -196,7 +204,7 @@ def trim_and_save_video(
                          .format(time_interval.end, video_duration))
     stream = open_videos(video_path)
     result_video_duration = time_interval.get_duration_in_seconds()
-    save_video(trim_video(stream, start_time, end_time), path_to_save,
+    save_video(trim_video(stream, time_interval.begin, time_interval.end), path_to_save,
                is_overwrite, result_video_duration, mode=mode)
 
 
@@ -221,8 +229,8 @@ def cut_part_and_save_video(
         raise ValueError('Time to cut beyond video duration')
     result_video_duration = video_duration - time_interval.get_duration_in_seconds()
     video_parts_without_middle = [
-        open_videos(video_path, ss=0, t=time_interval.begin_in_seconds),
-        open_videos(video_path, ss=time_interval.end_in_seconds)
+        open_videos(video_path, ss=0, t=time_interval.begin),
+        open_videos(video_path, ss=time_interval.end)
     ]
     save_video(merge_videos(video_parts_without_middle, unsafe_mod=True),
                path_to_save, is_overwrite, result_video_duration, mode)
@@ -266,7 +274,7 @@ def set_video_speed_and_save(
     if speed < 0.5:
         raise ValueError('{} is very small'.format(speed))
     video_duration = get_video_duration(video_path)
-    if video_duration < time_interval.end:
+    if time_interval is not None and video_duration < time_interval.end:
         raise ValueError('Interval to set speed ({}) beyond video duration({})'
                          .format(time_interval.end, video_duration))
     if time_interval is None:
@@ -274,19 +282,19 @@ def set_video_speed_and_save(
         result_video_duration = video_duration * (1 / speed)
     else:
         video, audio = set_video_speed(
-            open_videos(video_path, ss=time_interval.begin_in_seconds, t=time_interval.get_duration_in_seconds()),
+            open_videos(video_path, ss=time_interval.begin, t=time_interval.get_duration_in_seconds()),
             speed,
             raw_format=True
         )
         video_parts_without_middle = [
-            open_videos(video_path, ss=0, t=time_interval.begin_in_seconds),
+            open_videos(video_path, ss=0, t=time_interval.begin),
             FilterableStream(video, audio),
-            open_videos(video_path, ss=time_interval.end_in_seconds),
+            open_videos(video_path, ss=time_interval.end),
         ]
         changed_speed_video = merge_videos(video_parts_without_middle, unsafe_mod=True)
-        result_video_duration = (time_interval.begin_in_seconds +
+        result_video_duration = (time_interval.begin +
                                  time_interval.get_duration_in_seconds() * (1 / speed) +
-                                 video_duration - time_interval.end_in_seconds)
+                                 video_duration - time_interval.end)
     save_video(changed_speed_video, path_to_save, is_overwrite,
                result_video_duration, mode=mode)
 
@@ -300,7 +308,7 @@ def set_video_speed(
     audio = (input_video.audio
              .filter('asetpts', '{}*PTS'.format(round(1 / speed, 1)))
              .filter("atempo", speed))
-    return video, audio if raw_format else ffmpeg.concat(video, audio, v=1, a=1).node
+    return (video, audio) if raw_format else ffmpeg.concat(video, audio, v=1, a=1).node
 
 
 def overlay_video_on_another_and_save(
@@ -429,8 +437,8 @@ def save_video(
         with view(duration) as socket_filename:
             (out
              .global_args('-progress', 'unix://{}'.format(socket_filename))
-             .run(overwrite_output=is_overwrite, capture_stdout=True,
-                  capture_stderr=True)
+             .run(overwrite_output=is_overwrite, capture_stdout=mode is Usage.GUI,
+                  capture_stderr=mode is Usage.GUI)
              )
     else:
         out.run(overwrite_output=is_overwrite)

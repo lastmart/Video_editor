@@ -61,7 +61,7 @@ class Parser:
             else:
                 insert_video_and_save(
                     arg.videos[0],
-                    arg.videos[1],
+                    arg.videos[1:],
                     convert_time_to_seconds(arg.start_time),
                     arg.path_to_save,
                     mode=Usage.CONSOLE
@@ -69,7 +69,8 @@ class Parser:
 
         parser.add_argument(
             "-s", dest="start_time", type=str, default=None,
-            help="Start time to insert first video to second in format: HH:MM:SS (default: video duration)"
+            help="Start time of insertion into the first of all remaining ones in the format:"
+                 " HH:MM:SS (default: video duration)"
         )
         parser.set_defaults(func=select_insert_or_merge)
 

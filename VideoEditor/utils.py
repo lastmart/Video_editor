@@ -9,18 +9,26 @@ import os
 Usage = Enum('Usage', ['GUI', 'CONSOLE'])
 
 
+class TimeIntervalError(Exception):
+    pass
+
+
 def check_paths_correctness(paths: Union[str, list[str]],
-                            possible_formats=None) -> None:
+                            possible_formats: set = None,
+                            is_existing: bool = True) -> None:
     if possible_formats is None:
         possible_formats = {'mp4'}
     if isinstance(paths, str):
         paths = [paths]
-    for e in paths:
-        if not os.path.isdir(e.rsplit(os.sep, 1)[0]):
-            raise IOError('{} is not valid directory'.format(e)) from e
-        if e.rsplit('.', 1)[-1] not in possible_formats:
+    for path in paths:
+        directory = path.rsplit(os.sep, 1)[0]
+        if not os.path.isdir(directory):
+            raise IOError('{} is not valid directory'.format(path))
+        if is_existing and path.rsplit(os.sep, 1)[-1] not in os.listdir(directory):
+            raise IOError('{} is not valid file'.format(path))
+        if path.rsplit('.', 1)[-1] not in possible_formats:
             raise ValueError("{} hasn't {} format"
-                             .format(e, ", ".join(possible_formats)))
+                             .format(path, ", ".join(possible_formats)))
 
 
 def convert_time_to_seconds(date: Union[Iterable, str]) -> int:

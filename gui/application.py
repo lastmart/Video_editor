@@ -1,12 +1,12 @@
 import sys
-from PyQt6.QtCore import Qt, QUrl
+from PyQt6.QtCore import Qt, QUrl, QTime
 from PyQt6.QtWidgets import \
     QApplication, QWidget, QVBoxLayout, QPushButton, QSlider, \
     QStyle, QHBoxLayout, QMenu, QMenuBar, QSpacerItem, QSizePolicy
 from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput
 from VideoEditor.video_editor import \
     merge_videos_and_save, trim_and_save_video, \
-    set_video_speed_and_save, copy_video, cut_part_and_save_video
+    set_video_speed_and_save, copy_video, cut_part_and_save_video, insert_video_and_save
 from .supporting_windows import \
     run_trim_dialog_window, run_set_speed_dialog_window, \
     run_ask_confirmation_dialog_window, run_merge_into_dialog_window, \
@@ -16,7 +16,7 @@ from .cache_handler import cache_handler
 from .utils import \
     OperationType, OperationSystem, OS_TYPE, \
     get_open_file_name, get_open_file_names, get_save_file_name, \
-    process_time, process_fragment_time
+    process_time, process_fragment_time, process_args_for_merge
 from .constructor import get_volume_icon, get_text_label
 from .qt_extensions import MyVideoWidget
 from .message import *
@@ -229,39 +229,54 @@ class VideoEditorWindow(QWidget):
             get_success_save_message(user_file_path)
 
     def merge_with(self):
+        self._base_merge(
+            get_open_file_names,
+            self,
+            merge_videos_and_save
+        )
+
+    def merge_into(self):
+        self._base_merge(
+            run_merge_into_dialog_window,
+            self.video_slider.value(),
+            insert_video_and_save
+        )
+
+    def _base_merge(
+        self,
+        get_user_data_func: callable,
+        func_arg: object,
+        merge_func: callable
+    ):
         if cache_handler.current_index == 0:
             raise_no_file_error()
             return
 
-        user_file_paths = get_open_file_names(self)
+        user_data = get_user_data_func(func_arg)
 
-        if len(user_file_paths) == 0:
+        if user_data is None or len(user_data) == 0:
             return
 
-        file_paths = [cache_handler.get_current_path_to_look()]
-        file_paths.extend(user_file_paths)
+        args_for_merge = process_args_for_merge(
+            user_data,
+            cache_handler.get_current_path_to_look(),
+            cache_handler.get_current_path_to_save()
+        )
 
         try:
             cache_handler.prepare_cache_folder(
                 cache_handler.current_index + 1
             )
 
-            merge_videos_and_save(
-                file_paths, cache_handler.get_current_path_to_save()
-            )
+            merge_func(*args_for_merge)
         except IOError as e:
             raise_open_error(e.__str__())
+        except ValueError:
+            raise_wrong_time_error()
         else:
             cache_handler.update_current_index(OperationType.INCREASE)
             self.have_unsaved_changes = True
             self._play_resulting_video()
-
-    # TODO
-    def merge_into(self):
-        print(run_merge_into_dialog_window(self.video_slider.value()))
-
-    def _base_merge(self, get_users_data: callable):
-        pass
 
     def trim(self):
         main_text = "Select the fragment that will remain:"

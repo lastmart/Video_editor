@@ -26,7 +26,7 @@ def raise_no_file_error():
 
 
 def raise_wrong_time_error():
-    text = "Start or end time is incorrect"
+    text = "Time is incorrect"
     get_base_message(text, MessageType.ERROR)
 
 

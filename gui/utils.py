@@ -87,3 +87,23 @@ def process_time(time: int) -> tuple:
 def process_fragment_time(fragment_time: tuple[QTime, QTime]) -> TimeInterval:
     start, end = fragment_time
     return TimeInterval(start, end)
+
+
+def process_Qtime(time: QTime) -> int:
+    return time.hour() + time.minute() + time.second()
+
+
+def process_args_for_merge(
+    user_data: list, current_path: str, save_path: str
+) -> list:
+    if isinstance(user_data[0], QTime):  # merge into
+        args_for_merge = [
+            current_path, user_data[1], process_Qtime(user_data[0])
+        ]
+    else:  # merge with
+        args_for_merge = [current_path]
+        args_for_merge.extend(user_data)
+        args_for_merge = [args_for_merge]
+    args_for_merge.append(save_path)
+
+    return args_for_merge

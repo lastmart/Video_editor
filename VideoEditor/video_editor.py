@@ -4,7 +4,7 @@ from .utils import \
 from .progress_bar import \
     show_progress_in_console, show_progress_in_gui
 from collections import namedtuple
-from PyQt6.QtCore import QTime
+from PyQt6.QtCore import QTime, QPointF
 from typing import Union
 import ffmpeg
 import sys
@@ -61,6 +61,49 @@ class TimeInterval:
             raise ValueError('You specified the wrong time interval:\n'
                              'begin {begin} \nend {end}'
                              .format(begin=self.begin, end=self.end))
+
+
+class Point:
+    _x = None
+    _y = None
+
+    def __init__(self, point: Union[QPointF, tuple[int, int]]):
+        self.x = point.x() if isinstance(point, QPointF) else point[0]
+        self.y = point.y() if isinstance(point, QPointF) else point[1]
+
+    @property
+    def x(self):
+        return self._x
+
+    @x.setter
+    def x(self, value: int):
+        if not isinstance(value, int):
+            raise ValueError('X coordinate should be int, but given {} of type'
+                             .format(value,type(value)))
+        self._x = value
+
+    @property
+    def y(self):
+        return self._y
+
+    @y.setter
+    def y(self, value: int):
+        if not isinstance(value, int):
+            raise ValueError('Y coordinate should be int, but given {} of type'
+                             .format(value, type(value)))
+        self._y = value
+
+    def __ge__(self, value: int) -> bool:
+        return self.x >= value and self.y >= value
+
+    def __lt__(self, value: int) -> bool:
+        return self.x < value and self.y < value
+
+    def __sub__(self, other):
+        return Point((self.x-other.x, self.y-other.y))
+
+    def __str__(self):
+        return "X: {}, Y: {}".format(self._x, self._y)
 
 
 FilterableStream = namedtuple("FilterableStream", ['video', "audio"])
@@ -362,10 +405,8 @@ def overlay_video_on_another_and_save(
 def crop_and_save(
         video_path: str,
         path_to_save: str,
-        x_shift: int,
-        y_shift: int,
-        width: int,
-        height: int,
+        point1: Point,
+        point2: Point,
         is_overwrite: bool = False,
         mode: Usage = Usage.GUI
 ) -> None:
@@ -373,18 +414,24 @@ def crop_and_save(
     Crop video and save result
     :param video_path: absolute path to the video which you want crop
     :param path_to_save: the absolute path to the result video
-    :param x_shift: x-axis offset of the inserted video or image
-    :param y_shift: x-axis offset of the inserted video or image
-    :param width: width of cropped video
-    :param height: height of cropped video
+    :param point1: upper left corner coordinate of cropped video
+    :param point2: bottom right corner coordinate of cropped video
     :param is_overwrite: overwrites the video even if there is already a video in the save path
     :param mode: where to display progress: in the console or in the GUI
     :return: None
     """
+    width, height, _, _ = get_video_parameters(video_path)
+    if (point2 - point1) < 0:
+        raise ValueError('Cropping boundaries are incorrectly specified:\nupper left: {}\nbottom right {}'
+                         .format(point1, point2))
+    if point1 < 0 or point2 < 0 or width < point2.x or height < point2.y:
+        raise ValueError('The crop point extends beyond the boundaries of the video:\nupper left: {}\nbottom right {}'
+                         .format(point1, point2))
+
     stream = open_videos(video_path)
     result_video_duration = get_video_duration(video_path)
     cropped = (ffmpeg
-               .crop(stream, x_shift, y_shift, width, height)
+               .crop(stream, point1.x, point2.x, point2.x - point1.x, point2.y - point1.y)
                .concat(stream.audio, a=1))
     save_video(cropped, path_to_save, is_overwrite, result_video_duration, mode)
 

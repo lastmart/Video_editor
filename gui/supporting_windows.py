@@ -184,7 +184,9 @@ class OverlayDialogWindow(MyAsyncDialogWindow, OpenFilenameDialogMixin):
             have_choice_button=False
         )
         self.configurate(
-            self, "Select file for overlay"
+            self,
+            button_title="Select mp4, png, jpeg files for overlay",
+            available_filters="(*.mp4 *.png *.jpeg)"
         )
 
         main_text = get_text_label(

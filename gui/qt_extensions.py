@@ -29,13 +29,20 @@ class MyDialogWindow(QDialog):
 
 class OpenFilenameDialogMixin:
     def __init__(self):
+        self.available_filters = None
         self.target = None
         self.filenames = None
         self.filename_button = None
 
-    def configurate(self, obj: MyDialogWindow, button_title: str):
+    def configurate(
+        self,
+        obj: MyDialogWindow,
+        button_title: str,
+        available_filters="(*.mp4)"
+    ):
         self.target = obj
         self.filenames = None
+        self.available_filters = available_filters
 
         self.filename_button = get_button(
             self.target,
@@ -44,7 +51,12 @@ class OpenFilenameDialogMixin:
         )
 
     def get_open_filenames_wrapper(self) -> None:
-        self.filenames = get_open_file_names(self.target)
+        self.filenames = get_open_file_names(
+            self.target,
+            self.available_filters
+        )
+        if len(self.filenames) == 0:
+            return
         self.filename_button.setText("The files were selected")
         self.filename_button.setEnabled(False)
         self.target.done(1)

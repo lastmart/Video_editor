@@ -65,9 +65,9 @@ def get_open_file_name(obj):
 
 
 @process_paths(OS_TYPE)
-def get_open_file_names(obj):
+def get_open_file_names(obj, available_filters="(*.mp4)"):
     user_file_path, _ = QFileDialog.getOpenFileNames(
-        obj, filter="(*.mp4)"
+        obj, filter=available_filters
     )
     return user_file_path
 
